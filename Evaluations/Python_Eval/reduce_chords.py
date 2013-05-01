@@ -18,97 +18,84 @@ def reduce_to_minmaj(chords):
 
   for chord in (chords):
     
-    quality = chord2quality(chord)
+    quality, success = chord2quality(chord)
         
+    print quality    
     if quality == 0:
       # major
       c_type='maj'
-    if quality == 1: 
+    elif quality == 1: 
       # major
       c_type='maj'    
-    if quality == 2:
+    elif quality == 2:
       # major
       c_type='maj'    
-    if quality == 3:
+    elif quality == 3:
       # major
       c_type = 'maj'
-    if quality == 4:  
-       # suspended
-       c_type = 'maj'
-       
+    elif quality == 4:  
+      # suspended
+      c_type = 'maj'
+    else:   
+      # unknown
+      print 'Error in reduce_to_minmaj: Unknown chord quality' 
+      
     # get rootnote and append type
-    rootnote = getchordinfo(chord);
+    [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord);
     
     reduced_chords.append(rootnote + ':' + c_type)
 
 # Low level functions for extracting notes etc
-def chord2quality(chordsymbol,verbose=0):
+def chord2quality(chordsymbol):
 
   quality = 0;
-  errormessage = '';
 
-  [rootnote,shorthand,degreelist,bassdegree,success,error] = getchordinfo(chordsymbol);
+  [rootnote,shorthand,degreelist,bassdegree,success] = getchordinfo(chordsymbol);
 
   if success:  
     if len(shorthand) > 0:  
-        [quality, success, error] = short2quality(shorthand);      
+        [quality, success] = short2quality(shorthand);      
     else:
-        [quality, success, error] = degrees2quality(degreelist);
+        [quality, success] = degrees2quality(degreelist);
   else: 
-    errormessage = 'Error in Chord2quality: Chord "' + chordsymbol
-    if verbose == 1:
-        print errormessage
-        
-  return  quality, success, errormessage       
+    pass        
+  return  quality, success       
    
-def getchordinfo(chordsymbol, verbose=0):
+def getchordinfo(chordsymbol):
     
-  errormessage = '';
   rootnote = '';
   shorthand =  '';
-  #degrees = '';
-  #bassdegreel = '';
 
-
-  success = 0;
+  success = False;
 
   # parse the chord symbol into its constituent parts
-  [rootnote,shorthand, degreelist,bassdegree, success, errormessage] = parsechord(chordsymbol);
+  [rootnote,shorthand, degreelist,bassdegree, success] = parsechord(chordsymbol);
 
-  print rootnote
-  print shorthand
-  print degreelist
-  print bassdegree
-  sd;lkgfdklj
   if success:
     if rootnote is not 'N':
         
         # check validity of rootnote
-        [temp, temp2, success, errormessage] = parsenote(rootnote)
+        [temp, temp2, success] = parsenote(rootnote)
 
         # check validity of shorthand list
         if success and len(shorthand) > 0:
-           [temp, success, errormessage] = shorthand2degrees(shorthand);
+           [temp, success] = shorthand2degrees(shorthand);
         
         # check validity of degreelist
         if success and len(degreelist) > 0:
-            [temp, success, errormessage] = parsedegreelist(degreelist);
+            [temp, success] = parsedegreelist(degreelist);
     
         # check validity of bass degree
         if success and len(bassdegree) > 0:
-           [temp,temp2,temp3, success, errormessage] = parsedegree(bassdegree); 
-
-  if not success and verbose:
-    print errormessage
+           [temp,temp2,temp3, success] = parsedegree(bassdegree); 
     
-  return rootnote, shorthand,degreelist,bassdegree, success, errormessage
+  return rootnote, shorthand,degreelist,bassdegree, success
 
-def parsechord(chord, verbose=0):
+def parsechord(chord):
 
   ilength = len(chord);
 
   # initialise variables
-  errormessage = '';
   rootnote = '';
   shorthand = '';
   degrees = '';
@@ -150,8 +137,6 @@ def parsechord(chord, verbose=0):
     
     # parse the rest of the chord symbol
     while(index <= ilength):
-      print index
-      print ilength
         
       # reset temporary index 
       tempindex = 1
@@ -278,11 +263,9 @@ def parsechord(chord, verbose=0):
         success = 0
         index = ilength + 1 
 
-  return  rootnote, shorthand, degrees, bass, success, errormessage            
+  return  rootnote, shorthand, degrees, bass, success           
   
-def parsenote(note, verbose=0):
-
-  errormessage = ''
+def parsenote(note):
 
   ilength = len(note)
 
@@ -327,14 +310,13 @@ def parsenote(note, verbose=0):
     # if not an integer then the note string is incorrect
     print 'Error in parsenote: Unrecognised note "' + note 
 
-  return natural,accidentals,success, errormessage  
+  return natural,accidentals,success
   
-def shorthand2degrees(shorthand, verbose=0):
+def shorthand2degrees(shorthand):
 
   degreelist = ''
-  errormessage = ''
 
-  success = 1;
+  success = True
 
   # Basic chords
   if shorthand == '':
@@ -402,11 +384,10 @@ def shorthand2degrees(shorthand, verbose=0):
     print 'Error in shorthand2degrees: Unrecognised shorthand string "' + shorthand
     success = False
         
-  return degreelist, success, errormessage
+  return degreelist, success
 
-def parsedegreelist(degreelist, verbose=0):
+def parsedegreelist(degreelist):
 
-  errormessage = ''
   ilength = len(degreelist)
   index = 1
   tempindex = 1
@@ -417,20 +398,20 @@ def parsedegreelist(degreelist, verbose=0):
 
   while index <= ilength:
     
-    while (degreelist[index] is not ','): 
+    while (degreelist[index-1] is not ','): 
         
-      tempstring[tempindex] = degreelist[index]
+      tempstring[tempindex-1] = degreelist[index-1]
       tempindex = tempindex + 1
       index = index + 1
         
       if (index > ilength):
         break
         
-      if (degreelist[index] == ',') and (index == ilength):
+      if (degreelist[index-1] == ',') and (index == ilength):
         success = False
         print 'Error in parsedegreelist: degree list finishes with a comma "' + degreelist
     
-    [pardegrees(parindex,1),pardegrees(parindex,2),pardegrees(parindex,3),ok, error] = parsedegree(tempstring);
+    [pardegrees[parindex,1],pardegrees[parindex,2],pardegrees[parindex,3],ok] = parsedegree(tempstring);
         
     if ok:
       tempstring = ''
@@ -442,13 +423,12 @@ def parsedegreelist(degreelist, verbose=0):
       success = False
       index = ilength + 1  
 
-  return pardegrees, success, errormessage            
+  return pardegrees, success            
 
-def parsedegree(degree, verbose=0):
+def parsedegree(degree):
 
   ilength = len(degree)
 
-  errormessage = ''
   accidentals = 0
   interval = 0
   success = True
@@ -460,7 +440,7 @@ def parsedegree(degree, verbose=0):
   if len(degree) == 0:
 
     # check for omit degree '*'
-    if degree[index] == '*': 
+    if degree[index-1] == '*': 
       present = 0
       index = index + 1
 
@@ -469,18 +449,18 @@ def parsedegree(degree, verbose=0):
     # parse the degree string
     while index <= ilength:
 
-      if degree[index] == 'b': # FLAT
+      if degree[index-1] == 'b': # FLAT
         accidentals = accidentals - 1 #decrement accidental count
         index = index + 1
 
-      elif degree[index] == '#': # SHARP
+      elif degree[index-1] == '#': # SHARP
         accidentals = accidentals + 1 #increment accidental count
         index = index + 1
              
-      elif degree[index] in ['1','2','3','4','5','6','7','8','9']:
+      elif degree[index-1] in ['1','2','3','4','5','6','7','8','9']:
         # if neither of the above then remaining string should be
         # an integer interval value
-        tempstring[tempindex] = degree[index]
+        tempstring[tempindex-1] = degree[index-1]
                 
         tempindex = tempindex + 1
         index = index + 1
@@ -496,16 +476,229 @@ def parsedegree(degree, verbose=0):
   if success:
 
     # convert the interval string to an integer
-    [interval, success] = str(tempstring)
+    interval = str(tempstring)
 
     # check it worked and that the interval is valid
     if len(interval) == 0 or (interval <= 0): 
         success = 0;            
 
-  if not success: #ß correct degree therefore return success = 1 
+  if not success: # correct degree therefore return success = 1 
     # if not an integer then the degree string is incorrect
     print 'Error in parsedegree: Unrecognised degree "' + degree
     interval = 0
 
-  return interval,accidentals,present,success, errormessage
+  return interval, accidentals, present, success
+    
+def short2quality(shorthand):
+
+  success = True
+  quality = ''
+
+  # Triads
+  if shorthand == '':  
+    quality = 0
+  elif shorthand == 'maj':
+    quality = 0 
+  elif shorthand == 'min': 
+    quality = 1       
+  elif shorthand == 'dim':
+    quality = 2   
+  elif shorthand == 'aug': 
+    quality = 3
       
+  # sevenths    
+  elif shorthand == 'maj7': 
+    quality = 0
+  elif shorthand == 'min7': 
+    quality = 1
+  elif shorthand == '7': 
+    quality = 0        
+  elif shorthand == 'minmaj7': 
+    quality = 1        
+  elif shorthand == 'dim7': 
+    quality = 2
+  elif shorthand == 'hdim7':
+    quality = 2
+ 
+  # sixths
+  elif shorthand == 'maj6':
+    quality = 0       
+  elif shorthand == 'min6': 
+    quality = 1
+    
+  # ninths 
+  elif shorthand == '9':
+    quality = 0          
+  elif shorthand == 'maj9':
+    quality = 0    
+  elif shorthand == 'min9':
+    quality = 1    
+
+  # suspended
+  elif shorthand == 'sus4':
+    quality = 4
+  elif shorthand == 'sus2':
+    quality = 4
+        
+  # Elevenths:
+  elif shorthand == '11':
+    quality = 0
+  elif shorthand == 'min11':
+    quality = 1        
+  elif shorthand == 'maj11':
+    quality = 0
+        
+  # Thirteenths:
+  elif shorthand == '13':
+    quality = 0 
+  elif shorthand == 'min13':
+    quality = 1
+  elif shorthand == 'maj13':
+    quality = 0
+  else:
+    success = False
+    print 'Error in short2quality: unrecognised shorthand: ' + shorthand
+    
+  return quality,success  
+  
+def degrees2quality(degreelist):
+
+  quality = ''
+
+  # define templates for the 5 different triad chords (four quality families
+  #plus suspension) - weights mean maj thirds will have more effect than min
+  # 3rds which in turn have more effect than 5ths and then 2nds and 4ths
+
+  templates = []
+  templates.append([1,0,0,0,6,0,0,4,0,0,0,0]) # maj
+  templates.append([1,0,0,5,0,0,0,4,0,0,0,0]) # min
+  templates.append([1,0,0,5,0,0,4,0,0,0,0,0]) # dim
+  templates.append([1,0,0,0,6,0,0,0,4,0,0,0]) # aug
+  templates.append([1,0,2,0,0,2,0,4,0,0,0,0]) # sus      
+         
+  # get the semitone equivalents of the degrees in the degree list             
+  semitones,success = degrees2semitones(degreelist)
+
+  indexa = 1
+
+  # initialise a binary vector showing which semitones are present 
+  present = [0,0,0,0,0,0,0,0,0,0,0,0]
+
+  while (indexa <= 3) and (indexa <= len(semitones)):
+    
+    # for each of the first three semitones in the list make its position a
+    # one in the vector 'present' 
+    
+    if semitones[indexa-1] < 12:
+      present[semitones[indexa-1]] = 1
+    indexa = indexa + 1
+    
+  # multiply present by the templates matrix to give a vector of scores for
+  # the possible qualities
+  import numpy as np
+  qvector = np.dot(templates,present)
+
+
+  # find maximum value from the qualities vector
+  # this function benfits from the max function's picking of the first
+  # maximum value if there are several equal ones so is predisposed toward 
+  # major if the quality is not obvious from the input. (e.g. C:(1) returns major)  
+  index = np.argmax(qvector)
+
+  # take 1 from index to give correct enumeration
+  quality = index - 1
+
+
+  if success: 
+    print 'Error in degrees2quality: incorrect degree in list "' + degreelist
+
+  return quality,success
+  
+def degrees2semitones(degreelist):
+
+  ilength = len(degreelist)
+  index = 1
+  tempindex = 1
+  tempstring = ''
+  success = True
+  parindex  = 1
+  semitones = []
+
+  while index <= ilength:
+    
+    while (degreelist[index-1] is not ','):  
+        
+        tempstring[tempindex-1] = degreelist[index-1];
+        tempindex = tempindex + 1
+        index = index + 1
+        
+        if(index > ilength):
+          break;
+        
+        if (degreelist[index-1] == ',') and (index == ilength):
+          success = False
+          print 'Error in degrees2semitones: degree list finishes with a comma "' + degreelist
+    
+    out1,ok = degree2semitone(tempstring)
+    semitones[parindex-1] = out1
+    if ok:
+      tempstring = ''
+      tempindex = 1
+      parindex = parindex + 1
+      index = index + 1
+    else:
+      print 'Error in degrees2semitones: incorrect degree in list "' + degreelist
+      success = False
+      index = ilength + 1      
+
+  return semitones, success       
+
+def degree2semitone(degree):
+    
+  # ilength = len(degree)
+  success = False
+  semitone = 0
+
+  # parse the degree string
+  [interval, accidentals, present, ok] = parsedegree(degree)
+
+  if ok:
+    # convert interval and accidentals to equivalent number of semitones 
+    semitone, ok = interval2semitone(interval,accidentals)
+    success = True
+  else:
+    print 'Error in degree2semitone: incorrect degree "' + degree
+ 
+  return semitone, success
+
+def interval2semitone(interval, accidentals):
+
+  # semitone equivalents for intervals
+  #           interval   1,2,3,4,5,6,7         
+  semitonetranslation = [0,2,4,5,7,9,11];
+
+  semitone = 0;
+
+  success = True
+
+  if (interval > 0) and (interval < 50):
+
+  # semitone value is the number of semitones equivalent to the interval
+  # added to the number of accidentals (sharps are positive, flats are
+  # negative) and the number of octaves above the reference note to
+  # account for extensions 
+
+    import numpy as np
+    semitone = semitonetranslation(np.mod(interval,8) + np.fix(interval/8)) + accidentals + 12*np.fix(interval/8);
+
+  else:
+    success = False    
+    print 'Error in interval2semitone: out of range interval'
+
+  return semitone, success
+
+
+
+
+
+  
