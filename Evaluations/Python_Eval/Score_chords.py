@@ -1,5 +1,5 @@
 # Directories for prediction and GT
-GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs_minmaj/'
+GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
 Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Matt_pretrained_minmaj/'
 
 # Is something appended to the predictions? (ie '_prediction')?
@@ -9,7 +9,6 @@ appended = '_prediction.txt'
 import os
 GT_files = os.listdir(GT_dir)
 Predict_files = os.listdir(Predict_dir)
-sdlkjfd
 
 # Alphabet
 alphabet = 'minmaj';
@@ -19,88 +18,101 @@ Overlap = []
 song_lengths = []
 
 # Main loop
-for GT_file in(GT_files):
+import numpy as np
+for (index,GT_file) in enumerate(GT_files):
 
-  print 'Evaluating song: ' + str(i) + ' of ' + str(len(GT_files)) + ': ' + GT_file
+  if GT_file == '.DS_Store':
+    continue 
+    
+  print 'Evaluating song: ' + str(index) + ' of ' + str(len(GT_files)) + ': ' + GT_file
 
   # Get expected Prediction name
-  [trash,localname,extension] = fileparts(GT_file)
+  localname,extension = os.path.splitext(GT_file)
   Predict_name = Predict_dir + localname + appended
 
   # Read GT and Prediction
-  f_GT = fopen(GT_file); GT = textscan(f_GT,'%s%s%s'); fclose(f_GT)
-  f_P = fopen(Predict_name); P = textscan(f_P,'%s%s%s'); fclose(f_P)
+  GT = open(GT_dir + GT_file).readlines()
+  P = open(Predict_name).readlines()
 
-  GT_chords = GT[3]
-  P_chords = P[3]
+  GT_chords = []
+  GT_start_times = []; GT_end_times = []
+  for line in GT:
+    start_time,end_time,chord = line.split() 
+    
+    GT_chords.append(chord)
+    GT_start_times.append(np.double(start_time)) 
+    GT_end_times.append(np.double(end_time)) 
 
-  GT_times = []
-  for t in GT[1]:
-    pass
-    #GT_times = [GT_times ; [str2num(GT[1][t]) str2num(GT[2][t])]]; 
-
-  P_times = []
-  for t in P[1]:
-    pass
-    #P_times = [P_times ; [str2num(P{1}{t}) str2num(P{2}{t})]];
+  P_chords = []
+  P_start_times = []; P_end_times = []
+  for line in P:
+    start_time,end_time,chord = line.split() 
+    
+    P_chords.append(chord)
+    P_start_times.append(np.double(start_time)) 
+    P_end_times.append(np.double(end_time)) 
 
   # Fix prediction to length of GT
-  if P_times(end,end) < GT_times(end,end):
-    #P_times = [P_times ; [P_times(end-1,end) GT_times(end,end)]];
-    #P_chords = [P_chords ; 'N'];
-    pass
-  elif P_times(end,end) > GT_times(end,end):
-    pass
-   # bad_rows = find(P_times(:,1) > GT_times(end,end));
-   # P_times(bad_rows,:) = [];
-   # P_chords(bad_rows) = [];
-   # P_times(end,end) = GT_times(end,end); 
+  if P_end_times[-1] < GT_end_times[-1]:
+    P_start_times.append(P_start_times[-1])  
+    P_end_times.append(GT_end_times[-1])
+    P_chords.append('N')
+  elif P_end_times[-1] > GT_end_times[-1]:  
+    remove_rows = [i for (i,t) in enumerate(P_start_times) if t > GT_end_times[-1] or P_end_times[i] > GT_end_times[-1]]
+    
+    # Remove them
+    del P_start_times[remove_rows[0]:]
+    del P_end_times[remove_rows[0]:]
+    del P_chords[remove_rows[0]:]
   else:
     # Fine
     pass
 
   # Sample so they're the same alphabet
   if alphabet == 'minmaj':
-    GT_chords = reduce_to_minmaj(GT_chords);
-    P_chords = reduce_to_minmaj(P_chords);
-  elif alphabet == 'triads':      
-    GT_chords = reduce_to_triads(GT_chords);
-    P_chords = reduce_to_triads(P_chords);
-  elif alphabet == 'quads':      
-    GT_chords = reduce_to_quads(GT_chords);
-    P_chords = reduce_to_quads(P_chords);
+    pass  
+    #GT_chords = reduce_to_minmaj(GT_chords);
+    #P_chords = reduce_to_minmaj(P_chords);
+  elif alphabet == 'triads':    
+    pass  
+    #GT_chords = reduce_to_triads(GT_chords);
+    #P_chords = reduce_to_triads(P_chords);
+  elif alphabet == 'quads':     
+    pass  
+    #GT_chords = reduce_to_quads(GT_chords);
+    #P_chords = reduce_to_quads(P_chords);
   else:
     pass      
  
   # Now sample each chord at 1 kHz
-  #unique_chords = unique([GT_chords P_chords])
+  unique_chords = list(set(np.hstack((GT_chords,P_chords))))
   GT_chord_sample = []
   P_chord_sample = []
-  for t in (GT_chords):
-    sym = strmatch(GT_chords[t],unique_chords)
-    duration = round(1000*(GT_times(t,2) - GT_times(t,1)))
-    #GT_chord_sample = [GT_chord_sample repmat(sym,[1, duration])]
+  for index,chord in enumerate(GT_chords):
+    sym = unique_chords.index(chord)
+    duration = int(round(1000*(GT_end_times[index] - GT_start_times[index])))
+    GT_chord_sample.extend(np.tile(sym,duration))
 
-  for t in (P_chords):
-    sym = strmatch(P_chords[t],unique_chords);
-    duration = round(1000*(P_times(t,2) - P_times(t,1)));
-    #P_chord_sample = [P_chord_sample repmat(sym,[1, duration])];
+  for index,chord in enumerate(P_chords):
+    sym = unique_chords.index(chord)
+    duration = int(round(1000*(P_end_times[index] - P_start_times[index])))
+    P_chord_sample.extend(np.tile(sym,duration))
 
   # Still can have rounding effects, but only a maximum of 
   # nchords/1000 seconds...
-  #minlen = min([length(P_chord_sample) length(GT_chord_sample)]);
-  #GT_chord_sample = GT_chord_sample(1:minlen);
-  #P_chord_sample = P_chord_sample(1:minlen);
+  minlen = np.min([len(P_chord_sample),len(GT_chord_sample)])
+  GT_chord_sample = GT_chord_sample[:minlen]
+  P_chord_sample = P_chord_sample[:minlen]
 
   # Finally, output score
-  #Overlap(i) = 100*mean(eq(GT_chord_sample,P_chord_sample));
-  #song_lengths(i) = minlen;
+  correct = [GT_chord_sample[i] == p for (i,p) in enumerate(P_chord_sample)]
+  Overlap.append(100*np.mean(correct))
+  song_lengths.append(minlen)
   
-
-song_lengths = song_lengths/sum(song_lengths);
+song_lengths = np.true_divide(song_lengths,np.sum(song_lengths))
 
 print '***********'
-print 'Mean Overlap: ' + str(mean(Overlap)) + '%'
-print 'Total Overlap: ' + num2str(song_lengths*Overlap) + '%'
+print 'Mean Overlap: ' + str(np.mean(Overlap)) + '%'
+print 'Total Overlap: ' + str(np.dot(song_lengths,Overlap)) + '%'
 print '***********'
 
