@@ -1,13 +1,15 @@
 # Directories for prediction and GT
-GT_dir = '../chordlabs_minmaj/'
-Predict_dir = '../Predictions/Matt_pretrained_minmaj/'
+GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs_minmaj/'
+Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Matt_pretrained_minmaj/'
 
 # Is something appended to the predictions? (ie '_prediction')?
 appended = '_prediction.txt'
 
 # Get filenames
-GT_files = getAllFiles(GT_dir)
-Predict_files = getAllFiles(Predict_dir)
+import os
+GT_files = os.listdir(GT_dir)
+Predict_files = os.listdir(Predict_dir)
+sdlkjfd
 
 # Alphabet
 alphabet = 'minmaj';
@@ -91,9 +93,9 @@ for GT_file in(GT_files):
   #P_chord_sample = P_chord_sample(1:minlen);
 
   # Finally, output score
-  Overlap(i) = 100*mean(eq(GT_chord_sample,P_chord_sample));
-  song_lengths(i) = minlen;
-end
+  #Overlap(i) = 100*mean(eq(GT_chord_sample,P_chord_sample));
+  #song_lengths(i) = minlen;
+  
 
 song_lengths = song_lengths/sum(song_lengths);
 
