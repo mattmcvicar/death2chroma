@@ -10,9 +10,34 @@ Functions for computing 2d chroma features, ie chroma with luma.
 # <codecell>
 
 import numpy as np
+import scipy.weave
 
 # <codecell>
 
+def apdiff(x, y):
+    '''Compute an all-pairs difference matrix:  D[i,j] = x[i] - y[j]
+    
+    Input:
+        x - vector, arbitrary size
+        y - vector, arbitrary size
+    Output:
+        D - difference matrix, size x.shape[0] x y.shape[0]
+    '''
+    
+    nx, ny = len(x), len(y)
+
+    D = np.empty( (nx, ny), dtype=x.dtype)
+    
+    weaver = r"""
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            D[i * ny + j] = x[i] - y[j];
+        }
+    }
+"""
+    scipy.weave.inline(weaver, arg_names=['nx', 'ny', 'x', 'y', 'D'])
+    return D
+    
 def logFrequencySpectrum( audioData, fs, minFreq, binsPerOctave ):
     '''
     Compute log-frequency spectrum.  Based on code by DAn Ellis.
@@ -27,36 +52,47 @@ def logFrequencySpectrum( audioData, fs, minFreq, binsPerOctave ):
     '''
     
     # Number of samples
-    N = audioData.shape[0]*1.0
+    N = float(audioData.shape[0])
+    
     # Compute FFT
-    X = np.fft.rfft( np.hanning( audioData.shape[0] )*audioData )
-
+    X = np.fft.rfft( np.hanning( N ) * audioData )
+    X = np.abs(X)**2
+    
     # Ratio between adjacent frequencies in log-f axis
-    frequencyRatio = 2.0**(1.0/binsPerOctave);
+    frequencyRatio = 2.0**(1.0/binsPerOctave)
+    
     # How many bins in log-f axis
-    nBins = np.floor( np.log((fs/2.0)/minFreq)/np.log(frequencyRatio) );
+    nBins = np.floor( np.log((fs/2.0)/minFreq)/np.log(frequencyRatio) )
+    
     # Freqs corresponding to each bin in FFT
-    fftFreqs = np.arange( N/2.0 + 1.0 )*(fs/N);
-    fftFreqs = np.reshape( fftFreqs, (1, fftFreqs.shape[0]) )
-    nFFTBins = N/2.0 + 1;
+    fftFreqs = np.arange( N/2.0 + 1.0 )*(fs/N)
+    
     # Freqs corresponding to each bin in log F output
-    logFFTFreqs = minFreq*np.exp( np.log( 2 )*np.arange( nBins )/binsPerOctave);
-    logFFTFreqs = np.reshape( logFFTFreqs, (1, logFFTFreqs.shape[0]) )
+    logFFTFreqs = minFreq*np.exp( np.log( 2 )*np.arange( nBins )/binsPerOctave)
+    
     # Bandwidths of each bin in log F
-    logFreqBandwidths = logFFTFreqs*(frequencyRatio - 1);
+    logFreqBandwidths = logFFTFreqs*(frequencyRatio - 1)
+    
     # .. but bandwidth cannot be less than FFT binwidth
-    logFreqBandwidths = np.clip( logFreqBandwidths, fs/N, np.inf );
+    logFreqBandwidths = np.clip( logFreqBandwidths, fs/N, np.inf )
+    
     # Controls how much overlap there is between adjacent bands
-    overlapFactor = 0.5475;   # Adjusted by hand to make sum(mx'*mx) close to 1.0
+    overlapFactor = 0.5475   # Adjusted by hand to make sum(mx'*mx) close to 1.0
+    
     # Weighting matrix mapping energy in FFT bins to logF bins
     # is a set of Gaussian profiles depending on the difference in 
     # frequencies, scaled by the bandwidth of that bin
-    freqDiff = (np.tile( logFFTFreqs.T, (1, nFFTBins) ) - np.tile( fftFreqs, (nBins, 1) ))/np.tile( overlapFactor*logFreqBandwidths.T, (1, nFFTBins) );
-    mx = np.exp( -0.5*freqDiff**2 );
+    z = (1.0/(overlapFactor * logFreqBandwidths)).reshape((-1, 1))
+    
+    fftDiff = z*apdiff(logFFTFreqs, fftFreqs)
+
+    mx = np.exp( -0.5*(fftDiff)**2 )
+    
     # Normalize rows by sqrt(E), so multiplying by mx' gets approx orig spec back
-    mx = mx/np.tile( np.sqrt( 2*np.array( [np.sum( mx**2, axis=1 )] ).T ), (1, nFFTBins) );
+    z2 = (2 * (mx**2).sum(axis=1))**-0.5
+    
     # Perform mapping in magnitude-squared (energy) domain
-    return np.sqrt( np.dot( mx, (np.abs(X)**2) ) );
+    return np.sqrt( z2 * mx.dot(X) )
 
 # <codecell>
 
