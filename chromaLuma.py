@@ -11,6 +11,8 @@ Functions for computing 2d chroma features, ie chroma with luma.
 
 import numpy as np
 import scipy.weave
+import scipy.signal
+import librosa
 
 # <codecell>
 
@@ -37,26 +39,41 @@ def apdiff(x, y):
 """
     scipy.weave.inline(weaver, arg_names=['nx', 'ny', 'x', 'y', 'D'])
     return D
-    
-def logFrequencySpectrum( audioData, fs, minFreq, binsPerOctave ):
+
+# <codecell>
+
+def logFrequencySpectrum( audioData, fs, **kwargs ):
     '''
     Compute log-frequency spectrum.  Based on code by DAn Ellis.
 
     Input:
         audioData - vector of audio samples
         fs - sampling rate
-        minFreq - minimum frequency to consider
-        binsPerOctave - number of magnitude values to compute per octave
+        minNote - minimum note number to consider, default 24
+        binsPerOctave - number of magnitude values to compute per octave, default 48
+        nOctaves - number of octaves, default 6
+        smoothingWindow - window to use to smooth the spectrum, None = don't smooth, default np.hanning( binsPerOctave )
+        aWeight - whether or not to a-weight the spectrum, default False
+        takeLog - whether or not to take a log, default True
     Output:
         spectrum - log-frequency spectrum
     '''
+    
+    minNote = kwargs.get( 'minNote', 24 )
+    binsPerOctave = kwargs.get( 'binsPerOctave', 48 )
+    nOctaves = kwargs.get( 'nOctaves', 6 )
+    smoothingWindow = kwargs.get( 'smoothingWindow', np.hanning( binsPerOctave ) )
+    aWeight = kwargs.get( 'aWeight', False )
+    takeLog = kwargs.get( 'takeLog', True )
+    
+    minFreq = librosa.feature.midi_to_hz( minNote )
     
     # Number of samples
     N = float(audioData.shape[0])
     
     # Compute FFT
     X = np.fft.rfft( np.hanning( N ) * audioData )
-    X = np.abs(X)**2
+    X = np.abs( X )
     
     # Ratio between adjacent frequencies in log-f axis
     frequencyRatio = 2.0**(1.0/binsPerOctave)
@@ -89,48 +106,33 @@ def logFrequencySpectrum( audioData, fs, minFreq, binsPerOctave ):
     mx = np.exp( -0.5*(fftDiff)**2 )
     
     # Normalize rows by sqrt(E), so multiplying by mx' gets approx orig spec back
-    z2 = (2 * (mx**2).sum(axis=1))**-0.5
+    z2 = (2*(mx**2).sum(axis=1))**-0.5
     
-    # Perform mapping in magnitude-squared (energy) domain
-    return np.sqrt( z2 * mx.dot(X) )
+    # Perform mapping in magnitude domain
+    logFrequencyX = np.sqrt( z2*mx.dot(X) )
+    
+    if smoothingWindow is not None:
+        # Compute a spectral envelope for normalizing the spectrum
+        normalization = scipy.signal.fftconvolve( logFrequencyX, smoothingWindow, 'same' ) + 1
+        logFrequencyX /= normalization
+    
+    if aWeight:
+        # Compute A-weighting values for the spectrum
+        logFFTFreqsSquared = logFFTFreqs**2
+        weighting = 12200**2*logFFTFreqsSquared**2
+        weighting /= logFFTFreqsSquared + 20.6**2
+        weighting /= np.sqrt( (logFFTFreqsSquared + 107.7**2)*(logFFTFreqsSquared + 737.9**2) )
+        weighting /= logFFTFreqsSquared + 12200*2
+        logFrequencyX *= weighting
+        
+    if takeLog:
+        logFrequencyX = librosa.logamplitude( logFrequencyX )
+    
+    return logFrequencyX[:binsPerOctave*nOctaves]
 
 # <codecell>
 
-def CLSpectrum( audioData, fs, minNote, nOctaves, binsPerOctave, **kwargs ):
-    '''
-    Computes a 2d chroma-luma matrix
-    
-    Input:
-        audioData - vector of audio samples, size nSamples
-        fs - sampling rate
-        minNote - lowest MIDI note to get chroma value for
-        nOctaves - number of octaves
-        binsPerOctave - number of bins in each octave
-        log - take a log of the spectrum before chromafying?
-    Output:
-        chromaLuma - chroma-luma matrix, size nOctaves x binsPerOctave
-    '''
-    log = kwargs.get( 'log', True )
-    # Get log-freq spectrum
-    semitrum = logFrequencySpectrum( audioData, fs, midiToHz( minNote ), binsPerOctave )
-    # Optionally compute log
-    if log:
-        semitrum = 20*np.log10( semitrum + 1e-40 )
-    # Truncate to the requested number of octaves
-    semitrum = semitrum[:binsPerOctave*nOctaves]
-    # Wrap into chroma-luma matrix
-    return np.reshape( semitrum, (nOctaves, binsPerOctave) )
-
-# <codecell>
-
-def midiToHz( note ):
-    '''
-    Get the frequency of a MIDI note.
-    
-    Input:
-        note - MIDI note number (can be float)
-    Output:
-        frequency - frequency in Hz of MIDI note
-    '''
-    return 440.0*(2.0**((note - 69)/12.0))
+import librosa
+a, fs = librosa.load( 'amin7-harm.wav', sr=None )
+plt.plot( logFrequencySpectrum( a, fs ) )
 
