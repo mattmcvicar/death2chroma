@@ -11,7 +11,6 @@ Compute beat-synchronous chroma-luma matrices
 
 import librosa
 import numpy as np
-import separateHarmonicPercussive
 import chromaLuma
 
 # <codecell>
@@ -45,8 +44,9 @@ def beatChromaLuma( filename, **kwargs ):
     # Get harmonic component of signal
     frameSize = 2**np.ceil( np.log2( .09*fs ) )
     spectrogram = librosa.stft( audioData, n_fft=frameSize, hop_length=frameSize/4 )
-    seperator = separateHarmonicPercussive.HarmonicPercussiveSeparator( spectrogram )
-    harmonicData = librosa.istft( seperator.harmonicSpectrogram, n_fft=frameSize, hop_length=frameSize/4 )
+    harmonicSpectrogram, _ = librosa.hpss.hpss_median( np.abs( spectrogram ), win_H=13, p=3 )
+    harmonicSpectrogram = harmonicSpectrogram*np.exp( 1j*np.angle( harmonicSpectrogram ) )
+    harmonicData = librosa.istft( librosa.logamplitude( harmonicSpectrogram ), n_fft=frameSize, hop_length=frameSize/4 )
     # Compute a chroma-luma matrix for each beat
     CLPatches = np.zeros( (beats.shape[0], nOctaves, binsPerOctave) )
     for n, (beatStart, beatEnd) in enumerate( zip( beatSamples[:-1], beatSamples[1:] ) ):
