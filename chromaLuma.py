@@ -130,9 +130,3 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     
     return logFrequencyX[:binsPerOctave*nOctaves]
 
-# <codecell>
-
-import librosa
-a, fs = librosa.load( 'amin7-harm.wav', sr=None )
-plt.plot( logFrequencySpectrum( a, fs ) )
-
