@@ -1,6 +1,6 @@
 # Directories for prediction and GT
 GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
-Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Matt_pretrained_minmaj/'
+Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Matt_pretrained_complex/'
 
 # Is something appended to the predictions? (ie '_prediction')?
 appended = '_prediction.txt'
@@ -15,13 +15,15 @@ file_ext = '.lab'
 GT_files = [f for f in GT_files if os.path.splitext(f)[1] == file_ext]
 Predict_files = [f for f in Predict_files if os.path.splitext(f)[1] == file_ext]
 
-
 # Alphabet
-alphabet = 'minmaj';
+alphabet = 'quads';
 
 # Store results
 Overlap = []
 song_lengths = []
+
+# Ignore these files
+ignore = [150] # Revolution 9
 
 # Main loop
 import numpy as np
@@ -105,10 +107,15 @@ for (index,GT_file) in enumerate(GT_files):
   Overlap.append(100*np.mean(correct))
   song_lengths.append(minlen)
   
+# Remove some songs
+Overlap = [o for index,o in enumerate(Overlap) if index not in ignore]
+song_lengths = [s for index,s in enumerate(song_lengths) if index not in ignore]  
+  
+# Normalise song lengths  
 song_lengths = np.true_divide(song_lengths,np.sum(song_lengths))
 
 print '**********************'
-print 'Mean Overlap: ' + str(np.mean(Overlap)) + '%'
-print 'Total Overlap: ' + str(np.dot(song_lengths,Overlap)) + '%'
+print 'Mean Overlap: ' + str(round(np.mean(Overlap),2)) + '%'
+print 'Total Overlap: ' + str(round(np.dot(song_lengths,Overlap),2)) + '%'
 print '**********************'
 
