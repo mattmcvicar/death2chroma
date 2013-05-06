@@ -49,7 +49,7 @@ def reduce_to_minmaj(chords):
 # Low level functions for extracting notes etc
 def chord2quality(chordsymbol):
 
-  quality = 0;
+  quality = 0
 
   [rootnote,shorthand,degreelist,bassdegree,success] = getchordinfo(chordsymbol)
 
@@ -65,13 +65,13 @@ def chord2quality(chordsymbol):
    
 def getchordinfo(chordsymbol):
     
-  rootnote = '';
-  shorthand =  '';
+  rootnote = ''
+  shorthand =  ''
 
-  success = False;
+  success = False
 
   # parse the chord symbol into its constituent parts
-  [rootnote,shorthand, degreelist,bassdegree, success] = parsechord(chordsymbol);
+  [rootnote,shorthand, degreelist,bassdegree, success] = parsechord(chordsymbol)
 
   if success:
     if rootnote is not 'N':
@@ -81,39 +81,39 @@ def getchordinfo(chordsymbol):
 
         # check validity of shorthand list
         if success and len(shorthand) > 0:
-           [temp, success] = shorthand2degrees(shorthand);
+           [temp, success] = shorthand2degrees(shorthand)
         
         # check validity of degreelist
         if success and len(degreelist) > 0:
-            [temp, success] = parsedegreelist(degreelist);
+            [temp, success] = parsedegreelist(degreelist)
     
         # check validity of bass degree
         if success and len(bassdegree) > 0:
-           [temp,temp2,temp3, success] = parsedegree(bassdegree); 
+           [temp,temp2,temp3, success] = parsedegree(bassdegree) 
     
   return rootnote, shorthand,degreelist,bassdegree, success
 
 def parsechord(chord):
 
-  ilength = len(chord);
+  ilength = len(chord)
 
   # initialise variables
-  rootnote = '';
-  shorthand = '';
-  degrees = [];
-  bass = '';
+  rootnote = ''
+  shorthand = ''
+  degrees = []
+  bass = ''
 
-  success = True;
-  index = 1;
+  success = True
+  index = 1
 
   # check for 'no chord' symbol
   if chord[index-1] == 'N':
     rootnote = chord[index-1]
-    index = index + 1;
+    index = index + 1
     # check to see there are no further characters
     if (index <= ilength):
         print 'Error in parsechord: Extra characters after "no chord" symbol' 
-        success = 0;
+        success = 0
   else:
   # parse thechord symbol
 
@@ -129,7 +129,7 @@ def parsechord(chord):
       if (index > ilength) or chord[index-1] == '/':
         # if chord is a rootnote on its own or with just a bass note 
         # then it is a major chord therefore set shorthand to 'maj'
-        shorthand = 'maj';
+        shorthand = 'maj'
     
     # initialise booleans to record which switch characters we have found
     colon = False
@@ -191,7 +191,7 @@ def parsechord(chord):
                    
           if (index > ilength):
             print 'Error in parsechord: \nDegree list brackets not closed in chord "' + chord 
-            success = 0; 
+            success = 0 
                    
         else:
           print 'Error in parsechord: Incorrect character sequence in chord "' + chord 
@@ -223,7 +223,7 @@ def parsechord(chord):
         slash = True
 
         # move on to next character to process the expected bass degree
-        index = index +1;
+        index = index +1
                                      
         # check that we haven't overun the end of the symbol string
         if (index > ilength):
@@ -270,8 +270,8 @@ def parsenote(note):
 
   ilength = len(note)
 
-  accidentals = 0;
-  natural = [];
+  accidentals = 0
+  natural = []
   success = True
 
   index = 1
@@ -284,7 +284,7 @@ def parsenote(note):
     if note[index-1] in ['A','B','C','D','E','F','G']:
 
       # first character should be a natural
-      natural = note[index-1];
+      natural = note[index-1]
       index = index + 1
 
       # remaining characters should be sharps or flats
@@ -321,7 +321,7 @@ def shorthand2degrees(shorthand):
 
   # Basic chords
   if shorthand == '':
-    degreelist = ''; # empty  
+    degreelist = '' # empty  
   elif shorthand == 'maj':
     degreelist = '3,5' # major
   elif shorthand == 'min':
@@ -412,13 +412,13 @@ def parsedegreelist(degreelist):
         success = False
         print 'Error in parsedegreelist: degree list finishes with a comma "' + degreelist
     
-    [temp1,temp2,temp3,ok] = parsedegree(tempstring);
+    [temp1,temp2,temp3,ok] = parsedegree(tempstring)
         
     if ok:
       tempstring = ''
       tempindex = 1
-      parindex = parindex + 1;
-      index = index + 1;
+      parindex = parindex + 1
+      index = index + 1
     else:
       print 'Error in parsedegreelist: incorrect degree in list "' + str(degreelist)
       success = False
@@ -435,7 +435,7 @@ def parsedegree(degree):
   success = True
   present = True
 
-  index = 1;
+  index = 1
  
   # if the input string is not empty   
   if len(degree) > 0:
@@ -481,7 +481,7 @@ def parsedegree(degree):
 
     # check it worked and that the interval is valid
     if len(interval) == 0 or (interval <= 0): 
-        success = 0;            
+        success = 0            
 
   if not success: # correct degree therefore return success = 1 
     # if not an integer then the degree string is incorrect
@@ -632,7 +632,7 @@ def degrees2semitones(degreelist):
         index = index + 1
         
         if(index > ilength):
-          break;
+          break
         
         if (degreelist[index-1] == ',') and (index == ilength):
           success = False
@@ -678,9 +678,9 @@ def interval2semitone(interval, accidentals):
   
   # semitone equivalents for intervals
   #           interval   1,2,3,4,5,6,7         
-  semitonetranslation = [0,2,4,5,7,9,11];
+  semitonetranslation = [0,2,4,5,7,9,11]
 
-  semitone = 0;
+  semitone = 0
 
   success = True
   
