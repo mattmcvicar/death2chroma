@@ -3,7 +3,7 @@ def reduce_chords(chords,alphabet):
 
   reduced_chords = chords
   if alphabet == 'minmaj':
-    reduce_to_minmaj(chords)
+    reduced_chords = reduce_to_minmaj(chords)
   if alphabet == 'triads':
     pass
   if alphabet == 'quads':
@@ -19,8 +19,7 @@ def reduce_to_minmaj(chords):
   for chord in (chords):
     
     quality, success = chord2quality(chord)
-        
-    print quality    
+  
     if quality == 0:
       # major
       c_type='maj'
@@ -41,24 +40,27 @@ def reduce_to_minmaj(chords):
       print 'Error in reduce_to_minmaj: Unknown chord quality' 
       
     # get rootnote and append type
-    [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord);
+    [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
     
     reduced_chords.append(rootnote + ':' + c_type)
 
+  return reduced_chords
+  
 # Low level functions for extracting notes etc
 def chord2quality(chordsymbol):
 
   quality = 0;
 
-  [rootnote,shorthand,degreelist,bassdegree,success] = getchordinfo(chordsymbol);
+  [rootnote,shorthand,degreelist,bassdegree,success] = getchordinfo(chordsymbol)
 
   if success:  
     if len(shorthand) > 0:  
-        [quality, success] = short2quality(shorthand);      
+        [quality, success] = short2quality(shorthand)   
     else:
-        [quality, success] = degrees2quality(degreelist);
+        [quality, success] = degrees2quality(degreelist)
   else: 
-    pass        
+    pass    
+
   return  quality, success       
    
 def getchordinfo(chordsymbol):
@@ -98,7 +100,7 @@ def parsechord(chord):
   # initialise variables
   rootnote = '';
   shorthand = '';
-  degrees = '';
+  degrees = [];
   bass = '';
 
   success = True;
@@ -137,7 +139,7 @@ def parsechord(chord):
     
     # parse the rest of the chord symbol
     while(index <= ilength):
-        
+      
       # reset temporary index 
       tempindex = 1
         
@@ -153,7 +155,7 @@ def parsechord(chord):
           # found the first instance of a colon character
           colon = True
           index = index + 1
-                   
+             
           if (index > ilength):
             print 'Error in parsechord: Found ":" at end of chord string "' + chord 
             success = 0
@@ -169,7 +171,7 @@ def parsechord(chord):
             shorthand = shorthand + chord[index-1]
             index = index + 1
             tempindex = tempindex + 1
-                     
+
       elif chord[index-1] == '(':
                
         # if we have had a colon but no other switch charaters then
@@ -183,7 +185,7 @@ def parsechord(chord):
               break
                        
             # copy character into degrees
-            degrees[tempindex-1] = chord[index-1]
+            degrees.append(chord[index-1])
             index = index + 1
             tempindex = tempindex + 1
                    
@@ -210,7 +212,7 @@ def parsechord(chord):
           index = ilength + 1
                
         # check to see that the brackets contained something
-        if len(degrees) > 0:
+        if len(degrees) == 0:
           print 'Error in parsechord: Brackets contain no degrees in chord "' + chord 
           success = 0
           index = ilength + 1
@@ -218,7 +220,6 @@ def parsechord(chord):
       elif chord[index-1] == '/':
     
         # forward slash should be followed by a degree string
-              
         slash = True
 
         # move on to next character to process the expected bass degree
@@ -400,7 +401,7 @@ def parsedegreelist(degreelist):
     
     while (degreelist[index-1] is not ','): 
         
-      tempstring[tempindex-1] = degreelist[index-1]
+      tempstring = tempstring + degreelist[index-1]
       tempindex = tempindex + 1
       index = index + 1
         
@@ -411,7 +412,7 @@ def parsedegreelist(degreelist):
         success = False
         print 'Error in parsedegreelist: degree list finishes with a comma "' + degreelist
     
-    [pardegrees[parindex,1],pardegrees[parindex,2],pardegrees[parindex,3],ok] = parsedegree(tempstring);
+    [temp1,temp2,temp3,ok] = parsedegree(tempstring);
         
     if ok:
       tempstring = ''
@@ -419,7 +420,7 @@ def parsedegreelist(degreelist):
       parindex = parindex + 1;
       index = index + 1;
     else:
-      print 'Error in parsedegreelist: incorrect degree in list "' + degreelist
+      print 'Error in parsedegreelist: incorrect degree in list "' + str(degreelist)
       success = False
       index = ilength + 1  
 
@@ -437,7 +438,7 @@ def parsedegree(degree):
   index = 1;
  
   # if the input string is not empty   
-  if len(degree) == 0:
+  if len(degree) > 0:
 
     # check for omit degree '*'
     if degree[index-1] == '*': 
@@ -460,7 +461,7 @@ def parsedegree(degree):
       elif degree[index-1] in ['1','2','3','4','5','6','7','8','9']:
         # if neither of the above then remaining string should be
         # an integer interval value
-        tempstring[tempindex-1] = degree[index-1]
+        tempstring = tempstring + degree[index-1]
                 
         tempindex = tempindex + 1
         index = index + 1
@@ -578,7 +579,7 @@ def degrees2quality(degreelist):
          
   # get the semitone equivalents of the degrees in the degree list             
   semitones,success = degrees2semitones(degreelist)
-
+  
   indexa = 1
 
   # initialise a binary vector showing which semitones are present 
@@ -598,19 +599,17 @@ def degrees2quality(degreelist):
   import numpy as np
   qvector = np.dot(templates,present)
 
-
   # find maximum value from the qualities vector
   # this function benfits from the max function's picking of the first
   # maximum value if there are several equal ones so is predisposed toward 
   # major if the quality is not obvious from the input. (e.g. C:(1) returns major)  
   index = np.argmax(qvector)
 
-  # take 1 from index to give correct enumeration
-  quality = index - 1
+  # take 1 from index to give correct enumeration (no, python indexes from 0...)
+  quality = index 
 
-
-  if success: 
-    print 'Error in degrees2quality: incorrect degree in list "' + degreelist
+  if not success: 
+    print 'Error in degrees2quality: incorrect degree in list "' + str(degreelist)
 
   return quality,success
   
@@ -628,7 +627,7 @@ def degrees2semitones(degreelist):
     
     while (degreelist[index-1] is not ','):  
         
-        tempstring[tempindex-1] = degreelist[index-1];
+        tempstring = tempstring + degreelist[index-1]
         tempindex = tempindex + 1
         index = index + 1
         
@@ -640,7 +639,7 @@ def degrees2semitones(degreelist):
           print 'Error in degrees2semitones: degree list finishes with a comma "' + degreelist
     
     out1,ok = degree2semitone(tempstring)
-    semitones[parindex-1] = out1
+    semitones.append(out1)
     if ok:
       tempstring = ''
       tempindex = 1
@@ -673,6 +672,10 @@ def degree2semitone(degree):
 
 def interval2semitone(interval, accidentals):
 
+  # Need it to be int
+  import numpy as np
+  interval = int(interval)
+  
   # semitone equivalents for intervals
   #           interval   1,2,3,4,5,6,7         
   semitonetranslation = [0,2,4,5,7,9,11];
@@ -680,16 +683,16 @@ def interval2semitone(interval, accidentals):
   semitone = 0;
 
   success = True
-
+  
   if (interval > 0) and (interval < 50):
 
-  # semitone value is the number of semitones equivalent to the interval
-  # added to the number of accidentals (sharps are positive, flats are
-  # negative) and the number of octaves above the reference note to
-  # account for extensions 
+    # semitone value is the number of semitones equivalent to the interval
+    # added to the number of accidentals (sharps are positive, flats are
+    # negative) and the number of octaves above the reference note to
+    # account for extensions 
 
-    import numpy as np
-    semitone = semitonetranslation(np.mod(interval,8) + np.fix(interval/8)) + accidentals + 12*np.fix(interval/8);
+    des_index = int(np.mod(interval,8) + np.fix(interval/8))-1
+    semitone = int(semitonetranslation[des_index] + accidentals + 12*np.fix(interval/8))
 
   else:
     success = False    

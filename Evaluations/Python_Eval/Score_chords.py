@@ -10,6 +10,12 @@ import os
 GT_files = os.listdir(GT_dir)
 Predict_files = os.listdir(Predict_dir)
 
+# Only process the right file types
+file_ext = '.lab'
+GT_files = [f for f in GT_files if os.path.splitext(f)[1] == file_ext]
+Predict_files = [f for f in Predict_files if os.path.splitext(f)[1] == file_ext]
+
+
 # Alphabet
 alphabet = 'minmaj';
 
@@ -20,12 +26,9 @@ song_lengths = []
 # Main loop
 import numpy as np
 import reduce_chords
-for (index,GT_file) in enumerate(GT_files[:2]):
+for (index,GT_file) in enumerate(GT_files):
 
-  if GT_file == '.DS_Store':
-    continue 
-    
-  print 'Evaluating song: ' + str(index) + ' of ' + str(len(GT_files)) + ': ' + GT_file
+  print 'Evaluating song: ' + str(index + 1) + ' of ' + str(len(GT_files)) + ': ' + GT_file
 
   # Get expected Prediction name
   localname,extension = os.path.splitext(GT_file)
@@ -70,20 +73,19 @@ for (index,GT_file) in enumerate(GT_files[:2]):
     pass
 
   # Sample so they're the same alphabet 
-  GT_chords = ['G:maj']
-  GT_chords = reduce_chords.reduce_chords(GT_chords,alphabet)
-  P_chords = reduce_chords.reduce_chords(P_chords,alphabet)
+  GT_chords_reduce = reduce_chords.reduce_chords(GT_chords,alphabet)
+  P_chords_reduce = reduce_chords.reduce_chords(P_chords,alphabet)
 
   # Now sample each chord at 1 kHz
-  unique_chords = list(set(np.hstack((GT_chords,P_chords))))
+  unique_chords = list(set(np.hstack((GT_chords_reduce,P_chords_reduce))))
   GT_chord_sample = []
   P_chord_sample = []
-  for index,chord in enumerate(GT_chords):
+  for index,chord in enumerate(GT_chords_reduce):
     sym = unique_chords.index(chord)
     duration = int(round(1000*(GT_end_times[index] - GT_start_times[index])))
     GT_chord_sample.extend(np.tile(sym,duration))
 
-  for index,chord in enumerate(P_chords):
+  for index,chord in enumerate(P_chords_reduce):
     sym = unique_chords.index(chord)
     duration = int(round(1000*(P_end_times[index] - P_start_times[index])))
     P_chord_sample.extend(np.tile(sym,duration))
@@ -94,6 +96,10 @@ for (index,GT_file) in enumerate(GT_files[:2]):
   GT_chord_sample = GT_chord_sample[:minlen]
   P_chord_sample = P_chord_sample[:minlen]
 
+  # Display?
+  # import matplotlib.pyplot as plt
+  # plt.imshow(np.vstack((np.array(GT_chord_sample),np.array(P_chord_sample))),interpolation="nearest",aspect="auto"); plt.show() 
+  
   # Finally, output score
   correct = [GT_chord_sample[i] == p for (i,p) in enumerate(P_chord_sample)]
   Overlap.append(100*np.mean(correct))
@@ -101,8 +107,8 @@ for (index,GT_file) in enumerate(GT_files[:2]):
   
 song_lengths = np.true_divide(song_lengths,np.sum(song_lengths))
 
-print '***********'
+print '**********************'
 print 'Mean Overlap: ' + str(np.mean(Overlap)) + '%'
 print 'Total Overlap: ' + str(np.dot(song_lengths,Overlap)) + '%'
-print '***********'
+print '**********************'
 
