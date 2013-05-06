@@ -42,7 +42,7 @@ def apdiff(x, y):
 
 # <codecell>
 
-def logFrequencySpectrum( audioData, fs, **kwargs ):
+def logFrequencySpectrum( audioData, fs, **kwargs  ):
     '''
     Compute log-frequency spectrum.  Based on code by DAn Ellis.
 
@@ -128,5 +128,10 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     if takeLog:
         logFrequencyX = librosa.logamplitude( logFrequencyX )
     
-    return logFrequencyX[:binsPerOctave*nOctaves]
+    # Truncate by number of octaves requested
+    logFrequencyX = logFrequencyX[:binsPerOctave*nOctaves]
+    # Normalize
+    logFrequencyX = (logFrequencyX - logFrequencyX.min())/(logFrequencyX.max() - logFrequencyX.min())
+    
+    return logFrequencyX
 

@@ -27,12 +27,11 @@ def beatChromaLuma( filename, **kwargs ):
         log - take log-chroma? default True
     Output:
         beatTimes - vector of beat locations, in seconds, size nBeats
-        CLPatches - tensor of chroma-luma matrices, size nBeats x nOctaves x binPerOctave
+        semitrums - matrix of per-beat semitrums, size nBeats x binsPerOctave*nOctaves
     '''
-    minNote = kwargs.get( 'minNote', 24 )
-    nOctaves = kwargs.get( 'nOctaves', 7 )
+
     binsPerOctave = kwargs.get( 'binsPerOctave', 48 )
-    log = kwargs.get( 'log', True )
+    nOctaves = kwargs.get( 'nOctaves', 6 )
 
     # Read in audio data
     audioData, fs = librosa.load( filename, sr=None )
@@ -45,27 +44,30 @@ def beatChromaLuma( filename, **kwargs ):
     frameSize = 2**np.ceil( np.log2( .09*fs ) )
     spectrogram = librosa.stft( audioData, n_fft=frameSize, hop_length=frameSize/4 )
     harmonicSpectrogram, _ = librosa.hpss.hpss_median( np.abs( spectrogram ), win_H=13, p=3 )
-    harmonicSpectrogram = harmonicSpectrogram*np.exp( 1j*np.angle( harmonicSpectrogram ) )
-    harmonicData = librosa.istft( librosa.logamplitude( harmonicSpectrogram ), n_fft=frameSize, hop_length=frameSize/4 )
+    harmonicSpectrogram = harmonicSpectrogram*np.exp( 1j*np.angle( spectrogram ) )
+    harmonicData = librosa.istft( harmonicSpectrogram, n_fft=frameSize, hop_length=frameSize/4 )
+    librosa.output.write_wav( 'harm.wav', harmonicData, fs )
     # Compute a chroma-luma matrix for each beat
-    CLPatches = np.zeros( (beats.shape[0], nOctaves, binsPerOctave) )
+    semitrums = np.zeros( (beats.shape[0], nOctaves*binsPerOctave) )
     for n, (beatStart, beatEnd) in enumerate( zip( beatSamples[:-1], beatSamples[1:] ) ):
         # Grab audio samples within this beat
-        beatSamples = harmonicData[beatStart:beatEnd]
-        CLPatches[n] = chromaLuma.CLSpectrum( beatSamples, fs, minNote, nOctaves, binsPerOctave, log=log )
-    return librosa.frames_to_time( beats, fs, hop ), CLPatches
+        beatData = harmonicData[beatStart:beatEnd]
+        semitrums[n] = chromaLuma.logFrequencySpectrum( beatData, fs, **kwargs )
+    return librosa.frames_to_time( beats, fs, hop ), semitrums
 
 # <codecell>
 
 if __name__ == '__main__':
+   
+    # Create .npy files for each beatles mp3
     import os
     import glob
     dirs = [os.path.join( 'mp3s-32k', subdir) for subdir in os.listdir( 'mp3s-32k' )]
     for subdir in dirs:
         mp3Files = glob.glob( os.path.join( subdir, '*.mp3' ) )
         for mp3File in mp3Files:
-            beats, CLPatches = beatChromaLuma( mp3File )
+            beats, semitrums = beatChromaLuma( mp3File )
             nameBase = os.path.splitext( mp3File )[0]
             np.save( nameBase + '-beats.npy', beats )
-            np.save( nameBase + '-CL.npy', CLPatches )
+            np.save( nameBase + '-CL.npy', semitrums )
 
