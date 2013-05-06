@@ -51,7 +51,7 @@ def beatChromaLuma( filename, **kwargs ):
     CLPatches = np.zeros( (beats.shape[0], nOctaves, binsPerOctave) )
     for n, (beatStart, beatEnd) in enumerate( zip( beatSamples[:-1], beatSamples[1:] ) ):
         # Grab audio samples within this beat
-        beatSamples = audioData[beatStart:beatEnd]
+        beatSamples = harmonicData[beatStart:beatEnd]
         CLPatches[n] = chromaLuma.CLSpectrum( beatSamples, fs, minNote, nOctaves, binsPerOctave, log=log )
     return librosa.frames_to_time( beats, fs, hop ), CLPatches
 
