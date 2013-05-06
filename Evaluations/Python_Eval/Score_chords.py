@@ -19,7 +19,8 @@ song_lengths = []
 
 # Main loop
 import numpy as np
-for (index,GT_file) in enumerate(GT_files):
+import reduce_chords
+for (index,GT_file) in enumerate(GT_files[:2]):
 
   if GT_file == '.DS_Store':
     continue 
@@ -68,22 +69,11 @@ for (index,GT_file) in enumerate(GT_files):
     # Fine
     pass
 
-  # Sample so they're the same alphabet
-  if alphabet == 'minmaj':
-    pass  
-    #GT_chords = reduce_to_minmaj(GT_chords);
-    #P_chords = reduce_to_minmaj(P_chords);
-  elif alphabet == 'triads':    
-    pass  
-    #GT_chords = reduce_to_triads(GT_chords);
-    #P_chords = reduce_to_triads(P_chords);
-  elif alphabet == 'quads':     
-    pass  
-    #GT_chords = reduce_to_quads(GT_chords);
-    #P_chords = reduce_to_quads(P_chords);
-  else:
-    pass      
- 
+  # Sample so they're the same alphabet 
+  GT_chords = ['G:maj']
+  GT_chords = reduce_chords.reduce_chords(GT_chords,alphabet)
+  P_chords = reduce_chords.reduce_chords(P_chords,alphabet)
+
   # Now sample each chord at 1 kHz
   unique_chords = list(set(np.hstack((GT_chords,P_chords))))
   GT_chord_sample = []
