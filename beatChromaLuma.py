@@ -46,7 +46,6 @@ def beatChromaLuma( filename, **kwargs ):
     harmonicSpectrogram, _ = librosa.hpss.hpss_median( np.abs( spectrogram ), win_H=13, p=3 )
     harmonicSpectrogram = harmonicSpectrogram*np.exp( 1j*np.angle( spectrogram ) )
     harmonicData = librosa.istft( harmonicSpectrogram, n_fft=frameSize, hop_length=frameSize/4 )
-    librosa.output.write_wav( 'harm.wav', harmonicData, fs )
     # Compute a chroma-luma matrix for each beat
     semitrums = np.zeros( (beats.shape[0], nOctaves*binsPerOctave) )
     for n, (beatStart, beatEnd) in enumerate( zip( beatSamples[:-1], beatSamples[1:] ) ):
@@ -58,7 +57,6 @@ def beatChromaLuma( filename, **kwargs ):
 # <codecell>
 
 if __name__ == '__main__':
-   
     # Create .npy files for each beatles mp3
     import os
     import glob
