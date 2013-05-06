@@ -5,9 +5,9 @@ def reduce_chords(chords,alphabet):
   if alphabet == 'minmaj':
     reduced_chords = reduce_to_minmaj(chords)
   if alphabet == 'triads':
-    pass
+    reduced_chords = reduce_to_triads(chords)
   if alphabet == 'quads':
-    pass
+    reduced_chords = reduce_to_quads(chords)
 
   return reduced_chords
   
@@ -46,6 +46,88 @@ def reduce_to_minmaj(chords):
 
   return reduced_chords
   
+def reduce_to_triads(chords):
+    
+  reduced_chords = []
+
+  for chord in (chords):
+    
+    quality, success = chord2quality(chord)
+  
+    if quality == 0:
+      c_type='maj'
+    elif quality == 1: 
+      c_type='min'    
+    elif quality == 2:
+      c_type='dim'    
+    elif quality == 3:
+      c_type = 'aug'
+    elif quality == 4:  
+      c_type = 'sus'
+    else:   
+      # unknown
+      print 'Error in reduce_to_triads: Unknown chord quality' 
+      
+    # get rootnote and append type
+    [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
+    
+    reduced_chords.append(rootnote + ':' + c_type)
+
+  return reduced_chords  
+  
+def reduce_to_quads(chords):
+    
+  reduced_chords = []  
+  for chord in chords:  
+      
+    chordnotes, bassnote, success = chord2notes(chord)
+    
+    # If it's NC, move on.
+    if len(chordnotes) == 0:
+        reduced_chords.append('N')
+        continue
+    
+    # look at the root and go one or two back to look for 7ths
+    [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
+    minor7th = degree2note('b7',rootnote)
+    major7th = degree2note('7',rootnote)
+    
+    min7flag = False
+    maj7flag = False
+    # search for them in chordnotes
+    if minor7th[0] in chordnotes:
+        min7flag = True
+    
+    if major7th[0] in chordnotes:
+        maj7flag = True
+    
+    # Now get the rest of the chord
+    quality = chord2quality(chord)
+    
+    if quality == 0:
+      c_type='maj'
+    if quality == 1:
+      c_type='min'    
+    if quality == 2:
+      c_type='dim'   
+    if quality == 3:
+      c_type='aug'
+    if quality == 4:
+      c_type='sus'         
+                
+    # Get the degreelist for the triad
+    triad_type = rootnote + ':(' + shorthand2degrees(c_type)
+    
+    # see if min7 or maj7 have been flagged, else close bracket
+    if min7flag:
+        reduced_chords.append(triad_type + ',b7)')
+    elif maj7flag:
+        reduced_chords.append(triad_type + ',7)')
+    else:
+        reduced_chords.append(triad_type + ')')
+        
+  return reduced_chords
+    
 # Low level functions for extracting notes etc
 def chord2quality(chordsymbol):
 
@@ -72,7 +154,7 @@ def getchordinfo(chordsymbol):
 
   # parse the chord symbol into its constituent parts
   [rootnote,shorthand, degreelist,bassdegree, success] = parsechord(chordsymbol)
-
+  
   if success:
     if rootnote is not 'N':
         
@@ -309,7 +391,7 @@ def parsenote(note):
     
   if not success: # correct note therefore return success = 1 
     # if not an integer then the note string is incorrect
-    print 'Error in parsenote: Unrecognised note "' + note 
+    print 'Error in parsenote: Unrecognised note "' + note + '"'
 
   return natural,accidentals,success
   
@@ -481,12 +563,12 @@ def parsedegree(degree):
 
     # check it worked and that the interval is valid
     if len(interval) == 0 or (interval <= 0): 
-        success = 0            
+        success = False          
 
   if not success: # correct degree therefore return success = 1 
     # if not an integer then the degree string is incorrect
     print 'Error in parsedegree: Unrecognised degree "' + degree
-    interval = 0
+    interval = False
 
   return interval, accidentals, present, success
     
@@ -700,8 +782,298 @@ def interval2semitone(interval, accidentals):
 
   return semitone, success
 
+def chord2notes(chordsymbol):
+
+  mainlist = ''
+  success = True
+  chordnotes = []
+  bassnote = ''
+
+  # parse the chordsymbol
+  [rootnote,shorthand,degreelist,bass, success] = getchordinfo(chordsymbol)
+
+  # if 'no chord' then return N
+  if success:
+      
+    if rootnote == 'N':
+        chordnotes = []
+    else:
+        # combine shorthand and degreelist and obtain note names for each
+        # degree
+        if success:
+            [mainlist, success] = addshort2list(shorthand, degreelist)
+            if success:
+                # convert list of degrees to list of notes 
+                [chordnotes,success,errormessage] = degrees2notes(mainlist,rootnote)
+
+        # Now find the bass note
+        if success:
+            if len(bass) > 0:
+              [bassnote,success,errormessage] = degree2note(bass, rootnote)
+              if success:
+                ilength = len(chordnotes)
+                index = 1
+                while index <= ilength:
+                        
+                  # add an extra loop to check the notes of different
+                  # size
+                  for note in chordnotes:
+                    if bassnote == note:
+                      index = ilength + 1
+                      contains = True
+                      break
+                    else:
+                      contains = False
+                      index = index + 1 
+                    
+                    if not contains:
+                      chordnotes = [bassnote, chordnotes]
+            else:
+                bassnote = rootnote
+  return chordnotes, bassnote, success                
+    
+def addshort2list(shorthand, degreelist):
+
+  # initialise variables
+  fulldegreelist = ''
+  shortintervals = []
+  degreeintervals = []
+  addlist = []
+  success = True
+
+  # convert shorthand string to list of degrees
+  [shortdegrees, ok]  = shorthand2degrees(shorthand);
+
+  if ok:
+    # if that works convert the shorthand degrees and degreelist to
+    # intervals and accidentals
+    
+    # add the implied 1 interval to the shorthand list
+    if len(shortdegrees) > 0:
+      rootinterval = '1' # no comma if shorthand is empty
+    else:
+      rootinterval = '1,' # comma shows that there are further degrees after this one
+        
+    [shortintervals, ok] = parsedegreelist([rootinterval, shortdegrees]) 
+
+    if ok:
+
+      # this part of the algorithm finds all the present intervals and sorts
+      # them into ascending numeric order
+  
+      # First put the shorthand intervals into the full list
+      
+      ilength,y = shortintervals.shape
+   
+      for index in range(ilength):
+          # convert interval to a semitone value  
+          semitone = interval2semitone(shortintervals[index,1],shortintervals[index,2]);
+          
+          # Using the semitone value as an index will find redundant
+          # degrees and also sort them in number order. Multiplying the interval by its
+          # presence value leaves either the interval value or 0. Any element 
+          # in the array with interval of 0 will be discarded later
+          # We add 1 to the semitone value to handle the '1'  or 'unity'
+          # interval that would return a 0 semitone value
+          
+          # record the interval 
+          addlist[semitone + 1,1] = shortintervals[index,1] * shortintervals[index,3]
+         
+          # record the accidentals as well
+          addlist[semitone + 1,2] = shortintervals(index,2);
+          
+    else:
+        success = 0;
+
+    degreeintervals, ok2 = parsedegreelist(degreelist)
+    ok = ok and ok2
+    
+    if ok:
+      # Now add the degrees from the degreelist taking redundant and 
+      # ommitted degrees into account 
+      
+      [ilength,y] = degreeintervals.shape
+   
+      for index in range(ilength):
+        # convert interval to a semitone value  
+        [semitone, ok, errors] = interval2semitone(degreeintervals[index,1],degreeintervals[index,2])
+          
+        if (ok and semitone >= 0):
+          # record the interval 
+          addlist[semitone+1,1] = degreeintervals[index,1] * degreeintervals[index,3]
+          
+          # record the accidentals as well
+          addlist[semitone+1,2] = degreeintervals[index,2]
+          
+      else:
+        success = False 
+    else:
+        success = False
+    
+    
+    # now create fulldegreelist
+    if ok:
+
+        ilength,y = addlist.shape
+
+        for index in range(ilength):
+
+          # if there is a non zero interval in this element, convert 
+          # it to a degree symbol and add it to the output list
+          if (addlist[index,1] !=0):
+
+            degreesymbol = interval2degree(addlist[index,1],addlist[index,2])
+
+            if len(fulldegreelist) == 0:
+              # if this is the first degree then start list
+              fulldegreelist = degreesymbol 
+            else:
+              # add to list with a separating comma
+              fulldegreelist = [fulldegreelist + ',' + degreesymbol]
+    else:
+        success = False
+            
+  else:
+    success = False
+    
+  return fulldegreelist, success  
+    
+def interval2degree(interval,accidentals):
+
+  import numpy as np
+  # set verbose default to 0
+  success = True
+  degree = ''
 
 
+  if accidentals >=1:
+    # then the interval is either a natural or has a number of sharps 
+    if accidentals != 0:
+      for index in range(accidentals):
+        degree = degree + '#'
+    
+  else:
+    # then the interval has a number of flats 
+    abs_accidentals = np.abs(accidentals)
+    for index in range(abs_accidentals):   
+        degree.append('b')
+
+  if type(interval) is int:  
+    intervalstring = str(interval)
+    degree = degree + intervalstring
+  else:
+   success = False
+ 
+  return degree,success
+
+def degrees2notes(degreelist, root):
+
+  ilength = len(degreelist)
+  index = 1
+  tempindex = 1
+  tempstring = ''
+  success = True
+  notes = []
+
+  while index <= ilength:
+    
+    while (degreelist[index] != ','):  
+        
+      tempstring[tempindex] = degreelist[index]
+      tempindex = tempindex + 1
+      index = index + 1
+        
+      if (index > ilength):
+            break
+        
+      if (degreelist[index] == ',') and (index == ilength):
+        success = False
+        print('Error in degrees2notes: degree list finishes with a comma "' + degreelist)
+    
+    newnote,ok = degree2note(tempstring,root)
+  
+    if ok:
+      tempstring = ''
+      tempindex = 1
+      notes.append(newnote)
+      index = index + 1;
+    else:
+      print('Error in degrees2notes: incorrect degree in list "' + degreelist)
+      success = False
+      index = ilength + 1 
+
+  return notes, success  
+
+def degree2note(degree, root):
+
+  import numpy as np
+  note = [];
+
+  intervaltranslation = [5,0,2,4,-1,1,3,5]; # scale degree translations on line of fifths 
+
+  fifthpositions = ['F','C','G','D','A','E','B']; #order of naturals on line of fifths
+
+  success = True
+
+  # parse the root note
+  [rootnatural,rootaccs, rsuccess] = parsenote(root);
+
+  # parse the degree
+  [interval, degreeaccs, present, dsuccess] = parsedegree(degree)
+
+  # if parsing symbols was successful
+  if (rsuccess and dsuccess):
+
+    if rootnatural == 'F':
+      fifthindex = 0;        
+    if rootnatural == 'C':
+      fifthindex = 1;
+    if rootnatural == 'G':
+      fifthindex = 2;      
+    if rootnatural == 'D':
+      fifthindex = 3;
+    if rootnatural == 'A':
+      fifthindex = 4;
+    if rootnatural == 'E':
+      fifthindex = 5;      
+    if rootnatural == 'B':
+      fifthindex = 6;
+      
+    # locate enharmonic root on line of fifths (modulo 6 arithmetic)     
+    fifthoffset = rootaccs*7
+    fifthindex = fifthindex + fifthoffset;
+
+    # calculate interval translation on line of fifths (add 1 to account
+    # for matlab referencing of array elements... 
+    intervaloffset = intervaltranslation[np.mod(interval,7)+1]
+    finalposition = fifthindex + intervaloffset
+        
+    naturalvalue = np.mod(finalposition,7);
+    
+    # calculate number of accidentals
+    if finalposition < 0: 
+      # if final position is negative then calculate number of flats
+      # remembering to include the extra first flat (-1)
+      accidentals = np.fix((finalposition+1)/7) + degreeaccs -1    
+    else:
+      # note is a natural or has a number of sharps
+      accidentals = np.fix(finalposition/7) + degreeaccs
+    
+    note = fifthpositions[naturalvalue+1]    
+    if accidentals > 0:       
+        for i in range(accidentals):
+            note = note + '#'
+                    
+    elif accidentals <= 0:
+        abs_acc = abs(accidentals)
+        for i in range(abs_acc):
+          note = note + 'b'
+        
+  else: 
+    success = False
+    
+  return note,success    
+            
 
 
   
