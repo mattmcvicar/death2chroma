@@ -1083,7 +1083,7 @@ def degree2note(degree, root):
             note = note + '#'
                     
     elif accidentals <= 0:
-        abs_acc = abs(accidentals)
+        abs_acc = int(np.abs(accidentals))
         for i in range(abs_acc):
           note = note + 'b'
         
