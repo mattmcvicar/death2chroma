@@ -24,13 +24,13 @@ def reduce_to_minmaj(chords):
       # major
       c_type='maj'
     elif quality == 1: 
-      # major
-      c_type='maj'    
+      # minor
+      c_type='min'    
     elif quality == 2:
-      # major
-      c_type='maj'    
+      # diminished
+      c_type='min'    
     elif quality == 3:
-      # major
+      # augmented
       c_type = 'maj'
     elif quality == 4:  
       # suspended
@@ -55,15 +55,20 @@ def reduce_to_triads(chords):
     quality, success = chord2quality(chord)
   
     if quality == 0:
+      # major
       c_type='maj'
     elif quality == 1: 
+      # minor
       c_type='min'    
     elif quality == 2:
-      c_type='dim'    
+      # diminished
+      c_type='min'    
     elif quality == 3:
-      c_type = 'aug'
+      # augmented
+      c_type = 'maj'
     elif quality == 4:  
-      c_type = 'sus'
+      # suspended
+      c_type = 'maj'
     else:   
       # unknown
       print 'Error in reduce_to_triads: Unknown chord quality' 
@@ -107,15 +112,20 @@ def reduce_to_quads(chords):
     quality,success = chord2quality(chord)
     
     if quality == 0:
+      # major
       c_type='maj'
-    if quality == 1:
+    elif quality == 1: 
+      # minor
       c_type='min'    
-    if quality == 2:
-      c_type='dim'   
-    if quality == 3:
-      c_type='aug'
-    if quality == 4:
-      c_type='sus'         
+    elif quality == 2:
+      # diminished
+      c_type='min'    
+    elif quality == 3:
+      # augmented
+      c_type = 'maj'
+    elif quality == 4:  
+      # suspended
+      c_type = 'maj'        
              
     # Get the degreelist for the triad
     degs, success = shorthand2degrees(c_type)
