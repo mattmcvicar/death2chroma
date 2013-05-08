@@ -42,7 +42,10 @@ def reduce_to_minmaj(chords):
     # get rootnote and append type
     [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
     
-    reduced_chords.append(rootnote + ':' + c_type)
+    if rootnote == 'N':
+      reduced_chords.append('N') 
+    else:    
+      reduced_chords.append(rootnote + ':' + c_type)
 
   return reduced_chords
   
@@ -76,7 +79,10 @@ def reduce_to_triads(chords):
     # get rootnote and append type
     [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
     
-    reduced_chords.append(rootnote + ':' + c_type)
+    if rootnote == 'N':
+       reduced_chords.append('N')   
+    else:   
+      reduced_chords.append(rootnote + ':' + c_type)
 
   return reduced_chords  
   
@@ -207,7 +213,7 @@ def parsechord(chord):
     index = index + 1
     # check to see there are no further characters
     if (index <= ilength):
-        print 'Error in parsechord: Extra characters after "no chord" symbol' 
+        print 'Error in parsechord: Extra characters after "no chord" symbol'
         success = 0
   else:
   # parse the chord symbol
@@ -1202,4 +1208,104 @@ def note2fifthinfo(note):
       success = False
 
   return position,accidentals, success
+
+def chord2pitchclasses(chordsymbol):
+
+  success = True
+  pitchclasses = []
+  bassclass = ''
+
+  # get constituent notes
+  chordnotes, bassnote, success = chord2notes(chordsymbol)
+
+  if success and len(chordnotes) > 0:
+    # find pitchclasses of notes
+    pitchclasses, success = notes2pitchclasses(chordnotes)
+
+  if success and len(bassnote) > 0:
+    bassclass, success = note2pitchclass(str(bassnote))
+
+  if not success:
+    print 'Error in chord2pitchclasses: Couldn''t convert chord"' + chordsymbol + '"'
+    
+  return pitchclasses, bassclass, success  
   
+def notes2pitchclasses(notes):
+
+  ilength = len(notes)
+  index = 1
+  success = True
+
+  pitchclasses = []
+
+  while index <= ilength:
+    
+    # added .strip() here so it can parse note like 'G# ' with whitespace. 
+    out, success = note2pitchclass(str(notes[index-1]).strip());
+    pitchclasses.append(out)
+    if success:
+      index = index + 1
+    else:
+      print 'Error in notes2pitchclasses: couldn''t convert notes "' + notes + '"'
+      index = ilength + 1            
+      
+  return pitchclasses, success
+
+def note2pitchclass(note):
+
+  ilength = len(note)
+  index = 1
+  success = True
+
+
+  # first char should be a natural name A-G
+  if note[index-1] == 'C':
+    pitchclass = 0 
+    index = index + 1
+  elif note[index-1] == 'D':
+    pitchclass = 2 
+    index = index + 1
+  elif note[index-1] == 'E':
+    pitchclass = 4 
+    index = index + 1
+  elif note[index-1] == 'F':
+    pitchclass = 5 
+    index = index + 1
+  elif note[index-1] == 'G':
+    pitchclass = 7 
+    index = index + 1
+  elif note[index-1] == 'A':
+    pitchclass = 9
+    index = index + 1
+  elif note[index-1] == 'B':
+    pitchclass = 11 
+    index = index + 1
+  else:
+    print 'Error in Note2PitchClass: Unrecognised note "' + note + '"'
+    index = ilength + 1
+    pitchclass = -1
+    success = False
+         
+  # any other characters should be either flats or sharps
+  while index <= ilength:
+           
+    if note[index-1] == 'b':
+      pitchclass = pitchclass - 1 # decrement pitchclass value
+      index = index + 1
+    elif note[index-1] == '#':            
+      pitchclass = pitchclass + 1 # increment pitchclass value
+      index = index + 1
+    else: 
+      print 'Error in Note2PitchClass: Unrecognised note "' + note + '"'
+      index = ilength + 1
+      pitchclass = -1
+      success = False
+      
+  # Use modulo command to make sure that we are back within range 0-12
+  if success:    
+    import numpy as np
+    pitchclass = np.mod(pitchclass,12) 
+    
+  return pitchclass, success
+
+                  
