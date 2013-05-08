@@ -42,27 +42,29 @@ def apdiff(x, y):
 
 # <codecell>
 
-def logFrequencySpectrum( audioData, fs, **kwargs  ):
+def logFrequencySpectrum( audioData, fs, **kwargs ):
     '''
     Compute log-frequency spectrum.  Based on code by DAn Ellis.
 
     Input:
         audioData - vector of audio samples
         fs - sampling rate
-        minNote - minimum note number to consider, default 24
+        minNote - minimum note number to consider, default 36
         binsPerOctave - number of magnitude values to compute per octave, default 48
-        nOctaves - number of octaves, default 6
+        nOctaves - number of octaves, default 4
         smoothingWindow - window to use to smooth the spectrum, None = don't smooth, default np.hanning( binsPerOctave )
+        smoothingPower - power to raise spectral envelope to, default 3.0, ignored if smoothingWindow=None
         aWeight - whether or not to a-weight the spectrum, default False
         takeLog - whether or not to take a log, default True
     Output:
         spectrum - log-frequency spectrum
     '''
     
-    minNote = kwargs.get( 'minNote', 24 )
+    minNote = kwargs.get( 'minNote', 36 )
     binsPerOctave = kwargs.get( 'binsPerOctave', 48 )
-    nOctaves = kwargs.get( 'nOctaves', 6 )
+    nOctaves = kwargs.get( 'nOctaves', 4 )
     smoothingWindow = kwargs.get( 'smoothingWindow', np.hanning( binsPerOctave ) )
+    smoothingPower = kwargs.get( 'smoothingPower', 3.0 )
     aWeight = kwargs.get( 'aWeight', False )
     takeLog = kwargs.get( 'takeLog', True )
     
@@ -110,10 +112,18 @@ def logFrequencySpectrum( audioData, fs, **kwargs  ):
     
     # Perform mapping in magnitude domain
     logFrequencyX = np.sqrt( z2*mx.dot(X) )
-    
+
+    # Compute a spectral envelope for normalizing the spectrum
     if smoothingWindow is not None:
-        # Compute a spectral envelope for normalizing the spectrum
-        normalization = scipy.signal.fftconvolve( logFrequencyX, smoothingWindow, 'same' ) + 1
+        p = smoothingPower
+        # Try to avoid boundary effects
+        windowSize = smoothingWindow.shape[0]
+        pad = np.ones( windowSize )*np.mean( logFrequencyX )
+        paddedX = np.append( pad, np.append( logFrequencyX, pad ) )
+        # Compute spectral envelope for normalization, raised to a power to squash
+        normalization = np.power( scipy.signal.fftconvolve( paddedX**p, smoothingWindow, 'same' ), 1/p )
+        # Remove boundary effects
+        normalization = normalization[windowSize:-windowSize]
         logFrequencyX /= normalization
     
     if aWeight:
@@ -126,7 +136,8 @@ def logFrequencySpectrum( audioData, fs, **kwargs  ):
         logFrequencyX *= weighting
         
     if takeLog:
-        logFrequencyX = librosa.logamplitude( logFrequencyX )
+        # Actually take the cube root!  Yikes!
+        logFrequencyX = logFrequencyX**(1/3.0)
     
     # Truncate by number of octaves requested
     logFrequencyX = logFrequencyX[:binsPerOctave*nOctaves]
