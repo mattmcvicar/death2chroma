@@ -21,17 +21,20 @@ def beatChromaLuma( filename, **kwargs ):
     
     Input:
         filename - full path to file to process
-        minNote - lowest note to consider, default 24
-        nOctaves - number of octaves to include in the chroma-lumas, default 7
-        binsPerOctave - number of bins in each octave in the chroma-luma, default 48
-        log - take log-chroma? default True
+        minNote - minimum note number to consider, default 36
+        binsPerOctave - number of magnitude values to compute per octave, default 48
+        nOctaves - number of octaves, default 4
+        smoothingWindow - window to use to smooth the spectrum, None = don't smooth, default np.hanning( binsPerOctave )
+        smoothingPower - power to raise spectral envelope to, default 3.0, ignored if smoothingWindow=None
+        aWeight - whether or not to a-weight the spectrum, default False
+        takeLog - whether or not to take a log, default True
     Output:
         beatTimes - vector of beat locations, in seconds, size nBeats
         semitrums - matrix of per-beat semitrums, size nBeats x binsPerOctave*nOctaves
     '''
 
     binsPerOctave = kwargs.get( 'binsPerOctave', 48 )
-    nOctaves = kwargs.get( 'nOctaves', 6 )
+    nOctaves = kwargs.get( 'nOctaves', 4 )
 
     # Read in audio data
     audioData, fs = librosa.load( filename, sr=None )

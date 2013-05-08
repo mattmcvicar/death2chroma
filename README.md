@@ -27,4 +27,9 @@ Predictions - folder to store predictions. Predictions should be in the same for
 Evaluations - Folder containing MATLAB scripts for evaluation. Evaluation can be performed
               currently at the minor/major, triad, and quad level.
 
+USpoplabs - folder of chord labels for the USpop dataset. Contains subfolders for artist, album
+            and song title. Each file is a '.lab' in the same format as chordlabs
 
+USpoplabs_flat - as above, but in a flat directory
+
+reformat_uspop - a couple of scripts to move the USpop labels around
