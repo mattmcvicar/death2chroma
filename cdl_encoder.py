@@ -37,9 +37,6 @@ def process_song(song, coder):
     print songname
     X = np.load(song)
 
-    # Chop off the top octave
-    X = X[:,:-48]
-
     # Pad out dimension
     X = X.reshape((X.shape[0], X.shape[1], 1), order='A')
 
