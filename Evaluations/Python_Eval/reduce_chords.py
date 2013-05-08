@@ -1066,28 +1066,29 @@ def degree2note(degree, root):
     if rootnatural == 'B':
       fifthindex = 6;
       
-    # locate enharmonic root on line of fifths (modulo 6 arithmetic)     
-    fifthoffset = rootaccs*7
-    fifthindex = fifthindex + fifthoffset;
+    # locate enharmonic root on line of fifths (modulo 6 arithmetic)   
+    fifthoffset = rootaccs*7 
+    fifthindex = fifthindex + fifthoffset
 
     # calculate interval translation on line of fifths (DONT add 1 to account
     # for matlab referencing of array elements... 
-    
-    intervaloffset = intervaltranslation[np.mod(int(interval),7)]
+    modint = np.mod(int(interval),7)
+    intervaloffset = intervaltranslation[modint] 
     finalposition = fifthindex + intervaloffset
         
-    naturalvalue = np.mod(finalposition,7);
+    naturalvalue = np.mod(finalposition,7)
     
     # calculate number of accidentals
     if finalposition < 0: 
       # if final position is negative then calculate number of flats
       # remembering to include the extra first flat (-1)
-      accidentals = np.fix((finalposition+1)/7) + degreeaccs -1    
+      accidentals = int(np.fix((finalposition)/7)) + degreeaccs
     else:
       # note is a natural or has a number of sharps
       accidentals = int(np.fix(finalposition/7) + degreeaccs)
     
     note = fifthpositions[naturalvalue]    
+    
     if accidentals > 0:       
         for i in range(accidentals):
             note = note + '#'
@@ -1102,6 +1103,103 @@ def degree2note(degree, root):
     
   return note,success    
             
+def note2degree(note, root):
+
+  import numpy as np
+  success = True
+  degree = ''
+
+  # interval translations on the line of fifths
+  fifthtranslations = [1,5,2,6,3,7,4];
 
 
+  # get note and root natural position and accidentals on line of fifths 
+  noteposition, success1 = note2fifthposition(note)
+  
+  rootposition, success2 = note2fifthposition(root)
+
+  if success1 and success2:
+
+    # take the difference between the two note positions for relative positions
+    # of notes with respect to one and other
+    fifthsdifference = noteposition - rootposition + 1
+
+    # natural difference on line of fifths
+    fifthsinterval = np.mod((fifthsdifference-1),7);
+
+    i = 0;
+
+    # find number of accidentals apart on line of fifths
+    if fifthsdifference < 0: # if above 0 then either natural or sharp
+
+      #if final position is negative then calculate number of flats
+      # remembering to include the extra first flat (-1)
+      accidentals = np.fix((fifthsdifference)/7) -1
+    
+    else:
+      # note is a natural or has a number of sharps
+      accidentals = np.fix(fifthsdifference/7);
+
+
+    # put the required number of sharps or flats into the output string
+    if accidentals > 0:
+
+      for i in range(accidentals):
+        degree = degree + '#'
+        
+    elif accidentals <= 0:
+        abs_acc = int(np.abs(accidentals))
+        for i in range(abs_acc):            
+           degree = degree + 'b'
+    
+    # find interval value from translation array
+    interval = fifthtranslations[int(fifthsinterval)]
+   
+    degree = degree + str(interval)
+
+  else:
+    success = False
+    
+  return degree,success
+  
+def note2fifthposition(note):
+
+  success = True
+  noteposition = ''
+
+  notenatural, noteaccidentals, success1 = note2fifthinfo(note)
+
+  if success:
+    noteposition = notenatural + 7.*noteaccidentals - 1
+  
+  return noteposition, success  
+  
+def note2fifthinfo(note):
+
+  success = True
+  position = ''
+  accidentals = ''
+
+  natural, accidentals, success = parsenote(note)
+
+  if success:
+    if natural == 'F':
+            position = 0
+    elif natural == 'C':
+            position = 1
+    elif natural == 'G':
+            position = 2
+    elif natural == 'D':
+            position = 3            
+    elif natural == 'A':
+            position = 4            
+    elif natural == 'E':
+            position = 5            
+    elif natural == 'B':
+            position = 6           
+    else:
+      print 'Error in note2fifthinfo: unrecognised natural'
+      success = False
+
+  return position,accidentals, success
   
