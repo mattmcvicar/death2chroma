@@ -4,10 +4,12 @@ def reduce_chords(chords,alphabet):
   reduced_chords = chords
   if alphabet == 'minmaj':
     reduced_chords = reduce_to_minmaj(chords)
-  if alphabet == 'triads':
+  elif alphabet == 'triads':
     reduced_chords = reduce_to_triads(chords)
-  if alphabet == 'quads':
+  elif alphabet == 'quads':
     reduced_chords = reduce_to_quads(chords)
+  elif alphabet == 'bass':
+    reduced_chords = reduce_to_bass(chords)  
 
   return reduced_chords
   
@@ -56,7 +58,6 @@ def reduce_to_triads(chords):
   for chord in (chords):
     
     quality, success = chord2quality(chord)
-  
     if quality == 0:
       # major
       c_type='maj'
@@ -65,13 +66,16 @@ def reduce_to_triads(chords):
       c_type='min'    
     elif quality == 2:
       # diminished
-      c_type='min'    
+      c_type='dim'    
     elif quality == 3:
       # augmented
-      c_type = 'maj'
+      c_type = 'aug'
     elif quality == 4:  
       # suspended
-      c_type = 'maj'
+      if '4' in chord:
+        c_type = 'sus4'        
+      else:
+        c_type = 'sus2'
     else:   
       # unknown
       print 'Error in reduce_to_triads: Unknown chord quality' 
@@ -125,14 +129,17 @@ def reduce_to_quads(chords):
       c_type='min'    
     elif quality == 2:
       # diminished
-      c_type='min'    
+      c_type='dim'    
     elif quality == 3:
       # augmented
-      c_type = 'maj'
+      c_type = 'aug'
     elif quality == 4:  
       # suspended
-      c_type = 'maj'        
-             
+      if '4' in chord:
+        c_type = 'sus4'        
+      else:
+        c_type = 'sus2'
+        
     # Get the degreelist for the triad
     degs, success = shorthand2degrees(c_type)
     triad_type = rootnote + ':(' + degs
@@ -146,6 +153,39 @@ def reduce_to_quads(chords):
         reduced_chords.append(triad_type + ')')
         
   return reduced_chords
+
+def reduce_to_bass(chords):
+    
+  BassNotes= []
+  for C in chords:
+    # get chord info
+    rootnote, shorthand, degreelist,bass,success = parsechord(C)
+         
+    # no chord
+    if (rootnote == 'N'):
+      BassNotes.append(13)
+      
+    # Patch 1: no chord
+    elif (rootnote == '&pause'):
+      BassNotes.append(13)
+             
+    # no inversion, bass = rootnote
+    elif len(bass) == 0:
+      BassNotes.append(note2pitchclass(rootnote)[0] + 1)
+             
+    # there's a bassnote
+    else:
+      BassNotes.append(note2pitchclass(bass)[0] + 1)
+         
+    # check if it was an interval
+    if BassNotes[-1] == 0:
+      # get the note wrt the root
+      bnote = degree2note(bass,rootnote)[0]
+                   
+      # convert the note to a pitch class
+      BassNotes[-1] = note2pitchclass(bnote)[0] + 1   
+      
+  return BassNotes      
     
 # Low level functions for extracting notes etc
 def chord2quality(chordsymbol):
@@ -1281,7 +1321,9 @@ def note2pitchclass(note):
     pitchclass = 11 
     index = index + 1
   else:
-    print 'Error in Note2PitchClass: Unrecognised note "' + note + '"'
+      
+    # This 'fails' when passed a numeric (return 0), which is actually fine  
+    #print 'Error in Note2PitchClass: Unrecognised note "' + note + '"'
     index = ilength + 1
     pitchclass = -1
     success = False
