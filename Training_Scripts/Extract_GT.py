@@ -3,7 +3,7 @@
 # Parameters
 luma_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_luma/'
 GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
-alphabet = 'minmaj'
+alphabet = 'quads'
 
 # get filenames
 import os
@@ -60,6 +60,9 @@ for chord in chord_indices:
 # and then sample according to sample times
 import numpy as np
 chord_indices = chord_classes.keys()
+import sample_gt
+
+Annotations = []
 for (index,gt) in enumerate(GT_files):
     
   # Read file
@@ -84,8 +87,11 @@ for (index,gt) in enumerate(GT_files):
   # Load up the corresponding beat times
   beat_times = np.load(luma_dir + luma_beat_files[index])
   
-  # For each beat, get the beat interval and find the dominant chord
-  # in this region
-  annotation_sample_times = np.vstack((starts,ends))   
-    
+  # Sample the beats
+  annotation_sample_times = np.vstack((starts,ends))
+  n_states = chord_indices.index(())
+  Annotations.append(sample_gt.sample_annotations_beat(chord_numbers,annotation_sample_times,beat_times,n_states))
   
+# Save the annotations
+np.save('./Beatles_annotations_quad',Annotations)
+np.save('./Chord_dictionary_quad',chord_classes)
