@@ -22,22 +22,19 @@ from joblib import Parallel, delayed
 
 RETAIN = 0.95
 
-def vectorize(A):
-    return A.squeeze().reshape((A.shape[0], -1))
-
 def process_song(PCA, d, song):
 
     songname = os.path.basename(song)
-    songname = songname[:songname.index('-encoded.npy')]
+    songname = songname[:songname.index('-CL.npy')]
 
     print songname
-    A = vectorize(np.load(song))
+    X = np.load(song)
 
     # Transform the data, project to top $RETAIN variance dimensions
-    Ahat = PCA.transform(A)[:,:d]
+    Xhat = PCA.transform(X)[:,:d]
 
-    outname = '%s/%s-encoded-compressed.npy' % (os.path.dirname(song), songname)
-    np.save(outname, Ahat)
+    outname = '%s/%s-raw-compressed.npy' % (os.path.dirname(song), songname)
+    np.save(outname, Xhat)
     pass
 
 def process_data(n_jobs, PCA, file_glob):
@@ -54,5 +51,5 @@ if __name__ == '__main__':
     with open(sys.argv[2], 'r') as f:
         PCA = pickle.load(f)
 
-    file_glob = '%s/*/*-encoded.npy' % sys.argv[3]
+    file_glob = '%s/*/*-CL.npy' % sys.argv[3]
     process_data(n_jobs, PCA, file_glob)
