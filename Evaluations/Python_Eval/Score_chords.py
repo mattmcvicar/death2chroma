@@ -1,6 +1,6 @@
 # Directories for prediction and GT
-GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
-Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Matt_pretrained_complex/'
+GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/USpoplabs_flat/'
+Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Matt_USpop_complex/'
 
 # Is something appended to the predictions? (ie '_prediction')?
 appended = '_prediction.txt'
@@ -16,7 +16,7 @@ GT_files = [f for f in GT_files if os.path.splitext(f)[1] == file_ext]
 Predict_files = [f for f in Predict_files if os.path.splitext(f)[1] == file_ext]
 
 # Alphabet
-alphabet = 'minmaj';
+alphabet = 'quads';
 
 # Store results
 CP_Overlap = []
@@ -25,7 +25,8 @@ MIREX_Overlap = []
 song_lengths = []
 
 # Ignore these files
-ignore = [150] # Revolution 9
+#ignore = [150] # Revolution 9 for Beatles
+ignore = [] # USpop use all
 
 # Main loop
 import numpy as np
@@ -160,7 +161,12 @@ song_lengths = [s for index,s in enumerate(song_lengths) if index not in ignore]
 # Normalise song lengths  
 song_lengths = np.true_divide(song_lengths,np.sum(song_lengths))
 
+# Display
+import re
+Model = re.split('/',Predict_dir)[-2]
 print '***************************'
+print Model + ' - ' + alphabet
+print '---------------------------'
 print 'Mean Chord overlap: ' + str(round(np.mean(CP_Overlap),2)) + '%'
 print 'Mean Note overlap: ' + str(round(np.mean(NP_Overlap),2)) + '%'
 print 'Mean MIREX overlap: ' + str(round(np.mean(MIREX_Overlap),2)) + '%'
