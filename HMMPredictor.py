@@ -234,7 +234,7 @@ def viterbi_path(prior, transmat, obslik):
     #scale = ones(1,T);
     scale = np.ones( T )
     
-    t = 1
+    t = 0
     #delta(:,t) = prior .* obslik(:,t);
     delta[:, t] = prior*obslik[:, t]
     if scaled:
@@ -244,6 +244,7 @@ def viterbi_path(prior, transmat, obslik):
         scale[t] = 1.0/n
     #psi(:,t) = 0; % arbitrary value, since there is no predecessor to t=1
     psi[:, t] = 0
+    
     #for t=2:T
     for t in xrange( 1, T ):
         #for j=1:Q
@@ -290,6 +291,6 @@ if __name__=="__main__":
     # Pretty sure this step is right
     Models, Transitions, Priors = train_chord_models( trainVectors, trainLabels )
     #testVectors, testLabels = loadData( 'uspop2002-npy' )
-    #Labels, Liks = recognize_chords( trainVectors, Models, Transitions, Priors )
-    #print np.sum( Labels == trainLabels )/(1.0*Labels.shape[0])
+    Labels, Liks = recognize_chords( trainVectors, Models, Transitions, Priors )
+    print np.sum( Labels == trainLabels )/(1.0*Labels.shape[0])
 
