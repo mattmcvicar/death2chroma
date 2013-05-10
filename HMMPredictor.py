@@ -181,7 +181,7 @@ def train_chord_models(Features, Labels):
     for i in xrange( nmodels ):
         for j in xrange( nmodels ):
             #nn = 100*(i-1)+(j-1); 
-            nn = 100*(i - 1) + (j - 1)
+            nn = 100*i + j
             #% Add one to all counts, so no transitions have zero probability
             #Transitions(i,j) = 1+sum(gtt==nn);
             Transitions[i, j] = 1 + np.sum( gtt == nn )
@@ -191,10 +191,10 @@ def train_chord_models(Features, Labels):
     Priors = np.sum( Transitions, axis=1 )
     #% normalize each row
     #Transitions = Transitions./repmat(Priors,1,nmodels);
-    Transitions = Transitions/np.tile( Priors, (nmodels, 1) )
+    Transitions = Transitions/np.tile( Priors[np.newaxis].T, (1, nmodels) )
     #% normalize priors too
     #Priors = Priors/sum(Priors);
-    Priors, _ = normalise( Priors, 1 )
+    Priors /= Priors.sum()
     return Models, Transitions, Priors
 
 # <codecell>
@@ -273,7 +273,7 @@ if __name__=="__main__":
     import os
     import glob
     import scipy.io
-
+    
     def loadData( directory ):
         vectors = []
         labels = []
@@ -292,16 +292,4 @@ if __name__=="__main__":
     #testVectors, testLabels = loadData( 'uspop2002-npy' )
     #Labels, Liks = recognize_chords( trainVectors, Models, Transitions, Priors )
     #print np.sum( Labels == trainLabels )/(1.0*Labels.shape[0])
-
-# <codecell>
-
-trainVectors[:, 1] 
-
-# <codecell>
-
-scipy.io.savemat( 'Models1sigma.mat', {'s': Models[0]['sigma']} )
-
-# <codecell>
-
-Priors
 
