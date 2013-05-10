@@ -1,6 +1,16 @@
 # Directories for prediction and GT
+<<<<<<< HEAD
 GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/USpoplabs_flat/'
 Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/USpop_raw_full_linear_minmaj/'
+=======
+# GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
+# Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Beatles_minmaj_linear_compressed_cdl/'
+GT_dir = '/home/bmcfee/git/death2chroma/chordlabs/'
+Predict_dir = '/home/bmcfee/git/death2chroma/Predictions/Beatles_minmaj_linear_compressed/'
+
+# Is something appended to the predictions? (ie '_prediction')?
+appended = '-raw-compressed-prediction-linear.lab'
+>>>>>>> 4272dbb423423e90eba3458c7a1eed33e8babe76
 
 # Get filenames
 import os
@@ -126,7 +136,7 @@ for (index,GT_file) in enumerate(GT_files):
   # Still can have rounding effects, but only a maximum of 
   # nchords/1000 seconds...
   minlen = np.min([len(P_chord_sample_CP),len(GT_chord_sample_CP)])
-  GT_chord_sample_CP = GT_chord_sample_CP[:minlen]; 
+  GT_chord_sample_CP = GT_chord_sample_CP[:minlen] 
   P_chord_sample_CP = P_chord_sample_CP[:minlen]
   
   GT_chord_sample_NP = GT_chord_sample_NP[:minlen]
@@ -136,8 +146,10 @@ for (index,GT_file) in enumerate(GT_files):
   P_chord_sample_MIREX = P_chord_sample_MIREX[:minlen]
   
   # Display?
-  # import matplotlib.pyplot as plt
-  # plt.imshow(np.vstack((np.array(GT_chord_sample),np.array(P_chord_sample))),interpolation="nearest",aspect="auto"); plt.show() 
+  import matplotlib.pyplot as plt
+  print len(GT_chord_sample_NP)
+  plt.imshow(np.vstack((np.array(GT_chord_sample_NP),np.array(P_chord_sample_NP))),interpolation="nearest",aspect="auto")
+  plt.show() 
   
   # CP = chords have the same notes
   
@@ -150,6 +162,7 @@ for (index,GT_file) in enumerate(GT_files):
   NP_Overlap.append(100*np.mean(NP_correct))
   MIREX_Overlap.append(100*np.mean(MIREX_correct))
   song_lengths.append(minlen)
+  break
   
 # Remove some songs
 CP_Overlap = [o for index,o in enumerate(CP_Overlap) if index not in ignore]
