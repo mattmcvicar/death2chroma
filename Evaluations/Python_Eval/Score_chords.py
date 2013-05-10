@@ -1,9 +1,9 @@
 # Directories for prediction and GT
-GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/USpoplabs_flat/'
-Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Matt_USpop_complex/'
+GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
+Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Beatles_minmaj_linear_compressed_cdl/'
 
 # Is something appended to the predictions? (ie '_prediction')?
-appended = '_prediction.txt'
+appended = '-encoded-compressed-prediction-linear.lab'
 
 # Get filenames
 import os
@@ -16,7 +16,7 @@ GT_files = [f for f in GT_files if os.path.splitext(f)[1] == file_ext]
 Predict_files = [f for f in Predict_files if os.path.splitext(f)[1] == file_ext]
 
 # Alphabet
-alphabet = 'quads';
+alphabet = 'minmaj';
 
 # Store results
 CP_Overlap = []
@@ -25,8 +25,8 @@ MIREX_Overlap = []
 song_lengths = []
 
 # Ignore these files
-#ignore = [150] # Revolution 9 for Beatles
-ignore = [] # USpop use all
+ignore = [150] # Revolution 9 for Beatles
+#ignore = [] # USpop use all
 
 # Main loop
 import numpy as np

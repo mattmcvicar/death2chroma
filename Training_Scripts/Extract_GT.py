@@ -1,9 +1,9 @@
 # Trains a model, given directory of chromaluma and GT
 
 # Parameters
-luma_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_luma/'
+luma_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_luma_minmaj_labs/'
 GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
-alphabet = 'quads'
+alphabet = 'minmaj'
 
 # get filenames
 import os
@@ -63,8 +63,10 @@ chord_indices = chord_classes.keys()
 import sample_gt
 
 Annotations = []
+filenames = []
+Beat_times = []
 for (index,gt) in enumerate(GT_files):
-    
+  
   # Read file
   lines = open(GT_dir + gt).readlines()
   
@@ -90,8 +92,24 @@ for (index,gt) in enumerate(GT_files):
   # Sample the beats
   annotation_sample_times = np.vstack((starts,ends))
   n_states = chord_indices.index(())
-  Annotations.append(sample_gt.sample_annotations_beat(chord_numbers,annotation_sample_times,beat_times,n_states))
+  
+  # Sample annotations. Strip the first label to make same length as beat_times
+  Annotations.append(sample_gt.sample_annotations_beat(chord_numbers,annotation_sample_times,beat_times,n_states)[1:])
+  Beat_times.append(beat_times)  
+  
+  filenames.append(gt[:-len('.lab')]+'-labels-'+alphabet)
   
 # Save the annotations
-np.save('./Beatles_annotations_quad',Annotations)
-np.save('./Chord_dictionary_quad',chord_classes)
+#save_dir = '../../Beatles_luma_minmaj_labs/'
+#for index,file in enumerate(filenames):
+#  np.save(save_dir+file,Annotations[index])
+  
+# And the dictionary
+#np.save('../../dictionary_'+alphabet,(chord_classes, chord_indices))
+
+# Test the print_ground_truth.py script
+sys.path.append("../")
+import print_ground_truth
+sdlfj
+print_ground_truth.print_ground_truth(Annotations[0], Beat_times[0], './test.lab',chord_classes, chord_indices)
+

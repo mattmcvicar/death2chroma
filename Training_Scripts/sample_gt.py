@@ -14,7 +14,7 @@ def sample_annotations_beat(annotations,annotation_sample_times,sample_times,num
   while (sample_times[t_sample - 1] < annotation_sample_times[0][0]):
     sampled[t_sample - 1] = numStates
     t_sample = t_sample + 1
-    
+      
   # 1.2 Assure that t_sample falls in a chord region
   while (annotation_sample_times[1,t_anns-1] < sample_times[t_sample-1]):
         t_anns = t_anns + 1
@@ -60,11 +60,11 @@ def sample_annotations_beat(annotations,annotation_sample_times,sample_times,num
     else:
       while (t_anns <= number_samples and annotation_sample_times[1, t_anns - 1] < sample_times[t_sample - 1]):
         t_anns = t_anns + 1
-    
+      
   # 3. if there are still samples left, assign no chord
   if t_sample <= number_windows:
-    sampled[t_sample-1:] = np.tile(numStates,(1,number_windows+1))
-    
+    sampled[t_sample-1:] = [numStates]*(len(sampled)-t_sample+1)
+      
   if (t_anns == number_samples): # The last chord after final beats
     sampled[number_windows] = annotations[t_anns - 1]
   elif t_anns < number_samples:
@@ -81,6 +81,6 @@ def sample_annotations_beat(annotations,annotation_sample_times,sample_times,num
 
     maxIndex = np.argmax(intervalC)
     sampled[number_windows] = annotations[t_anns - 1 + maxIndex - 1]
-             
+        
   # 4. return the annotation samples
   return sampled
