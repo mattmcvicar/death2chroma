@@ -99,13 +99,16 @@ for (index,gt) in enumerate(GT_files):
   
   filenames.append(gt[:-len('.lab')]+'-labels-'+alphabet)
   
+  
 # Save the annotations
 #save_dir = '../../Beatles_luma_minmaj_labs/'
 #for index,file in enumerate(filenames):
 #  np.save(save_dir+file,Annotations[index])
   
 # And the dictionary
-#np.save('../../dictionary_'+alphabet,(chord_classes, chord_indices))
+import pickle
+pickle.dump()
+
 
 # Test the print_ground_truth.py script
 sys.path.append("../")
