@@ -1,9 +1,6 @@
 # Directories for prediction and GT
-GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
-Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Beatles_minmaj_linear_compressed_cdl/'
-
-# Is something appended to the predictions? (ie '_prediction')?
-appended = '-encoded-compressed-prediction-linear.lab'
+GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/USpoplabs_flat/'
+Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/USpop_raw_full_linear_minmaj/'
 
 # Get filenames
 import os
@@ -14,6 +11,9 @@ Predict_files = os.listdir(Predict_dir)
 file_ext = '.lab'
 GT_files = [f for f in GT_files if os.path.splitext(f)[1] == file_ext]
 Predict_files = [f for f in Predict_files if os.path.splitext(f)[1] == file_ext]
+
+# Is something appended?
+appended = Predict_files[0][len(GT_files[0][:-len(file_ext)]):-len(file_ext)] + file_ext
 
 # Alphabet
 alphabet = 'minmaj';
