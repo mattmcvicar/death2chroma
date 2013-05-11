@@ -278,6 +278,8 @@ if __name__=="__main__":
     with open( 'Training_Scripts/minmaj_dict.pickle' ) as f:
         chord_classes, chord_keys = pickle.load( f )
     labels = [chord_classes[chord_keys[i]][0] for i in xrange(25)]
+    labelSort = [i for (v, i) in sorted((v, i) for (i, v) in enumerate(labels))]
+    labels.sort()
 
     def loadData( directory, featureType ):
         vectors = []
@@ -309,9 +311,10 @@ if __name__=="__main__":
                 plt.figure( figsize=(8, 8) )
                 confusion = 1.0*sklearn.metrics.confusion_matrix( testLabels, predictedLabels )
                 confusion /= confusion.sum( axis=1, keepdims=True )
+                confusion = confusion[:,labelSort][labelSort,:]
                 plt.imshow( confusion, interpolation='nearest' )
                 plt.yticks( range( 25 ), labels )
-                plt.xticks( range( 25 ), labels, rotation=60 )
+                plt.xticks( range( 25 ), labels, rotation=80 )
                 plt.colorbar()
                 plt.title( "Train={}, Test={}, Feature={}".format( train, test, feature ) )
 
