@@ -18,7 +18,6 @@ ROOT_DIR = '/home/bmcfee/git/death2chroma/'
 import numpy as np
 import pprint
 import scipy.linalg
-import functools
 
 # <codecell>
 
@@ -136,8 +135,10 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
     % 2010-04-07 Dan Ellis dpwe@ee.columbia.edu  after extractFeaturesAndTrain.m
     '''
     
+    Labels_FLAT   = np.hstack( Labels )
+    Features      = np.hstack(Features)
     # I'm not calculating a specific number of models - infer it from the labels.
-    nmodels = np.unique( Labels ).shape[0]
+    nmodels = np.unique( Labels_FLAT ).shape[0]
     
     #% global mean/covariance used for empty models
     
@@ -150,7 +151,7 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
     for i in xrange( nmodels ):                         #for i = 1:nmodels
         #Models.append({})
         
-        examples = np.flatnonzero( Labels == i )        #examples = find(Labels == i-1);  % labels are 0..24
+        examples = np.flatnonzero( Labels_FLAT == i )        #examples = find(Labels == i-1);  % labels are 0..24
         
         if examples.shape[0] > 0:                       #if length(examples) > 0
             Models.append(DIST(Features[:, examples]))
@@ -158,24 +159,33 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
             Models.append(global_model)
     
     #% Count the number of transitions in the label set
-    # FIXME: this needs to operate on a per-song level
     
-    Transitions = np.ones( (nmodels, nmodels) )
-    for s_from, s_to in zip(Labels[:-1], Labels[1:]):
-        Transitions[s_from, s_to] += 1.0
+    Transitions = np.ones( (nmodels, nmodels), dtype=float )
+    Priors      = np.ones( nmodels, dtype=float)
+    
+    for song_labels in Labels:
+        Priors[song_labels[0]] += 1.0
+        for s_from, s_to in zip(song_labels[:-1], song_labels[1:]):
+            Transitions[s_from, s_to] += 1.0
+    
+    # Normalize the rows of the transition matrix
+    Transitions = Transitions.dot(np.diag(Transitions.sum(axis=1)**-1))
+    
+    # Normalize the priors
+    Priors = Priors / Priors.sum()
     
     #% priors of each chord
     #Priors = sum(Transitions,2);
     
-    Priors = np.sum( Transitions, axis=1, keepdims=True )
+    #Priors = np.sum( Transitions, axis=1, keepdims=True )
     
     #% normalize each row
     #Transitions = Transitions./repmat(Priors,1,nmodels);
-    Transitions = Transitions/np.tile( Priors, (1, nmodels) )
+    #Transitions = Transitions/np.tile( Priors, (1, nmodels) )
     
     #% normalize priors too
-    Priors /= Priors.sum()                                          #Priors = Priors/sum(Priors);
-    return Models, Transitions, Priors.flatten()
+    #Priors /= Priors.sum()                                          #Priors = Priors/sum(Priors);
+    return Models, Transitions, Priors
 
 # <codecell>
 
@@ -241,6 +251,31 @@ def viterbi_path(prior, transmat, obslik):
 
 # <codecell>
 
+def loadData( directory, featureType ):
+    
+    v_glob = glob.glob( os.path.join( ROOT_DIR, directory, '*-{}.npy'.format( featureType ) ) )
+    v_glob.sort()
+    
+    
+    vectors = [np.load(vf).T for vf in v_glob]
+    
+    l_glob = glob.glob( os.path.join( ROOT_DIR, directory, '*-labels-minmaj.npy' ) )
+    l_glob.sort()
+    
+    labels = [np.load(lf) for lf in l_glob]
+    
+        
+    #return np.hstack( vectors ), np.hstack( labels )
+    return vectors, labels
+
+def wrapToChroma( vectors ):
+    vectors = np.dot( np.kron( np.eye( 12 ), np.ones( (1, 4) ) ), vectors )
+    vMin = np.min( vectors, axis=1 )
+    vMax = np.max( vectors, axis=1 )
+    return ((vectors.T - vMin)/(vMax - vMin)).T
+
+# <codecell>
+
 if __name__=="__main__":
     
     import os
@@ -254,38 +289,15 @@ if __name__=="__main__":
         
     labels = [chord_classes[chord_keys[i]][0] for i in xrange(25)]
 
-    
-    def loadData( directory, featureType ):
-        
-        v_glob = glob.glob( os.path.join( ROOT_DIR, directory, '*{}.npy'.format( featureType ) ) )
-        v_glob.sort()
-        
-        
-        vectors = [np.load(vf).T for vf in v_glob]
-        
-        l_glob = glob.glob( os.path.join( ROOT_DIR, directory, '*labels-minmaj.npy' ) )
-        l_glob.sort()
-        
-        labels = [np.load(lf) for lf in l_glob]
-        
-            
-        return np.hstack( vectors ), np.hstack( labels )
-
-    def wrapToChroma( vectors ):
-        vectors = np.dot( np.kron( np.eye( 12 ), np.ones( (1, 4) ) ), vectors )
-        vMin = np.min( vectors, axis=1 )
-        vMax = np.max( vectors, axis=1 )
-        return ((vectors.T - vMin)/(vMax - vMin)).T
-
-    for feature in ['encoded-compressed', 'raw-compressed', 'wrapCL']:
-    #for feature in ['raw-compressed']:
+    for feature in ['encoded-compressed', 'raw-compressed']:
         for train in ['data/beatles/*']:
+            
             trainVectors, trainLabels = loadData( train, feature )
             
             if feature == 'wrapCL':
                 trainVectors = wrapToChroma( trainVectors )
                 
-            Models, Transitions, Priors = train_chord_models( trainVectors, trainLabels )
+            Models, Transitions, Priors = train_chord_models( trainVectors, trainLabels, DIST=model_gaussian )
             
             plt.figure( figsize=(16, 8) )
             i = 1
@@ -296,7 +308,11 @@ if __name__=="__main__":
                 if feature == 'wrapCL':
                     testVectors = wrapToChroma( testVectors )
                 
-                predictedLabels, Liks = recognize_chords( testVectors, Models, Transitions, Priors )
+                predictedLabels = []
+                for tv in testVectors:
+                    predictedLabels.extend(recognize_chords( tv, Models, Transitions, Priors )[0])
+                
+                testLabels = np.hstack(testLabels)
                 
                 print "######## Train={}, Test={}, Feature={}".format( train, test, feature )
                 print sklearn.metrics.classification_report( testLabels, predictedLabels, target_names=labels )
