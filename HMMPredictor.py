@@ -15,7 +15,7 @@ import pprint
 
 # <codecell>
 
-def gaussian_prob( x, m, C, use_log=0 ):
+def gaussian_prob( x, m, C, use_log=False ):
     '''
     % GAUSSIAN_PROB Evaluate a multivariate Gaussian density.
     % p = gaussian_prob(X, m, C, use_log)
@@ -213,7 +213,6 @@ def viterbi_path(prior, transmat, obslik):
     % path(t) = q(t), where q1 ... qT is the argmax of the above expression.
     '''
 
-
     #% delta(j,t) = prob. of the best sequence of length t-1 and then going to state j, and O(1:t)
     #% psi(j,t) = the best predecessor state, given that we ended up in state j at t
     
@@ -228,7 +227,7 @@ def viterbi_path(prior, transmat, obslik):
     #delta = zeros(Q,T);
     delta = np.zeros( (Q, T) )
     #psi = zeros(Q,T);
-    psi = np.zeros( (Q, T) )
+    psi = np.zeros( (Q, T), dtype=np.int )
     #path = zeros(1,T);
     path = np.zeros( T )
     #scale = ones(1,T);
@@ -248,12 +247,13 @@ def viterbi_path(prior, transmat, obslik):
     #for t=2:T
     for t in xrange( 1, T ):
         #for j=1:Q
-        for j in xrange( Q ):
-            #[delta(j,t), psi(j,t)] = max(delta(:,t-1) .* transmat(:,j));
-            delta[j, t] = np.max( delta[:, t-1]*transmat[:, j] )
-            psi[j, t] = np.argmax( delta[:, t-1]*transmat[:, j] )
-            #delta(j,t) = delta(j,t) * obslik(j,t);
-            delta[j, t] *= obslik[j, t]
+        #for j in xrange( Q ):
+        #[delta(j,t), psi(j,t)] = max(delta(:,t-1) .* transmat(:,j));
+        dt = (delta[:, t-1]*transmat.T).T
+        psi[:, t] = np.argmax( dt, axis=1 )
+        delta[:, t] = dt[psi[:, t], range(Q)]
+        #delta(j,t) = delta(j,t) * obslik(j,t);
+        delta[:, t] *= obslik[:, t]
         if scaled:
             #[delta(:,t), n] = normalise(delta(:,t));
             delta[:, t], n = normalise( delta[:, t] )
@@ -274,23 +274,45 @@ if __name__=="__main__":
     import os
     import glob
     import scipy.io
-    
-    def loadData( directory ):
+    import sklearn.metrics
+    import pickle
+    with open( 'Training_Scripts/minmaj_dict.pickle' ) as f:
+        chord_classes, chord_keys = pickle.load( f )
+    labels = [chord_classes[chord_keys[i]][0] for i in xrange(25)]
+
+    def loadData( directory, featureType ):
         vectors = []
         labels = []
-        for vectorFile in glob.glob( os.path.join( directory, '*wrapCL.npy' ) ):
+        for vectorFile in glob.glob( os.path.join( directory, '*{}.npy'.format( featureType ) ) ):
             vectors.append( np.load( vectorFile ).T )
         for labelFile in glob.glob( os.path.join( directory, '*labels-minmaj.npy' ) ):
             labels.append( np.load( labelFile ) )
         return np.hstack( vectors ), np.hstack( labels )
-    
-    trainVectors, trainLabels = loadData( 'beatles' )
-    
-    scipy.io.savemat( 'train.mat', {'trainVectors':trainVectors, 'trainLabels':trainLabels} )
-    
-    # Pretty sure this step is right
-    Models, Transitions, Priors = train_chord_models( trainVectors, trainLabels )
-    #testVectors, testLabels = loadData( 'uspop2002-npy' )
-    Labels, Liks = recognize_chords( trainVectors, Models, Transitions, Priors )
-    print np.sum( Labels == trainLabels )/(1.0*Labels.shape[0])
+
+    def wrapToChroma( vectors ):
+        vectors = np.dot( np.kron( np.eye( 12 ), np.ones( (1, 4) ) ), vectors )
+        vMin = np.min( vectors, axis=1 )
+        vMax = np.max( vectors, axis=1 )
+        return ((vectors.T - vMin)/(vMax - vMin)).T
+
+    for feature in ['wrapCL', 'encoded-compressed', 'raw-compressed']:
+        for train in ['beatles']:
+            for test in ['beatles', 'uspop2002-npy']:
+                trainVectors, trainLabels = loadData( train, feature )
+                testVectors, testLabels = loadData( test, feature )
+                if feature == 'wrapCL':
+                    trainVectors = wrapToChroma( trainVectors )
+                    testVectors = wrapToChroma( testVectors )
+                Models, Transitions, Priors = train_chord_models( trainVectors, trainLabels )
+                predictedLabels, Liks = recognize_chords( testVectors, Models, Transitions, Priors )
+                print "######## Train={}, Test={}, Feature={}".format( train, test, feature )
+                print sklearn.metrics.classification_report( testLabels, predictedLabels, target_names=labels )
+                plt.figure( figsize=(8, 8) )
+                confusion = 1.0*sklearn.metrics.confusion_matrix( testLabels, predictedLabels )
+                confusion /= confusion.sum( axis=1, keepdims=True )
+                plt.imshow( confusion, interpolation='nearest' )
+                plt.yticks( range( 25 ), labels )
+                plt.xticks( range( 25 ), labels, rotation=60 )
+                plt.colorbar()
+                plt.title( "Train={}, Test={}, Feature={}".format( train, test, feature ) )
 
