@@ -12,6 +12,7 @@ http://www.ee.columbia.edu/~dpwe/e4896/code/prac10/chords_code.zip
 
 import numpy as np
 import pprint
+import scipy.linalg
 
 # <codecell>
 
@@ -35,13 +36,12 @@ def gaussian_prob( x, m, C, use_log=False ):
     d, N = x.shape
     #%assert(length(m)==d); % slow
     #m = m(:);
-    m = m.reshape( (m.shape[0], 1) )
+    m = m.reshape( (-1, 1) )
     #M = m*ones(1,N); % replicate the mean across columns
-    M = np.dot( m, np.ones( (1, N) ) )
     #denom = (2*pi)^(d/2)*sqrt(abs(det(C)));
-    denom = (2*np.pi)**(d/2.0)*np.sqrt( np.abs( np.linalg.det( C ) ) )
+    denom = np.sqrt( (2*np.pi)**d*np.abs( np.linalg.det( C ) ) )
     #mahal = sum(((x-M)'*inv(C)).*(x-M)',2);   % Chris Bregler's trick
-    mahal = np.sum( np.dot( (x - M).T, np.linalg.inv( C ) )*(x - M).T, 1 )
+    mahal = np.sum( np.dot( (x - m).T, np.linalg.inv( C ) )*(x - m).T, 1 )
     #if any(mahal<0)
     if (mahal < 0).any():
         print 'mahal < 0 => C is not psd'
@@ -294,7 +294,7 @@ if __name__=="__main__":
         vMax = np.max( vectors, axis=1 )
         return ((vectors.T - vMin)/(vMax - vMin)).T
 
-    for feature in ['wrapCL', 'encoded-compressed', 'raw-compressed']:
+    for feature in ['encoded-compressed', 'raw-compressed', 'wrapCL']:
         for train in ['beatles']:
             for test in ['beatles', 'uspop2002-npy']:
                 trainVectors, trainLabels = loadData( train, feature )
