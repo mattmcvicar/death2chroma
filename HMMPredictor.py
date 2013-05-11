@@ -11,7 +11,7 @@ http://www.ee.columbia.edu/~dpwe/e4896/code/prac10/chords_code.zip
 # <codecell>
 
 # Where does the repo live?
-ROOT_DIR = '/home/bmcfee/git/death2chroma/'
+ROOT_DIR = '.'
 
 # <codecell>
 
@@ -173,7 +173,7 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
     
     # FIXME: it's not all that justified to use the bias of each chord as the initial state
     # distribution: most songs start with a NO-CHORD, and we should exploit that.
-    Priors = Transitions.sum(axis=1)
+    #Priors = Transitions.sum(axis=1)
     
     # Normalize the rows of the transition matrix
     Transitions = Transitions.dot(np.diag(Transitions.sum(axis=1)**-1))
@@ -303,8 +303,8 @@ if __name__=="__main__":
     labelSort = [i for (v, i) in sorted((v, i) for (i, v) in enumerate(labels))]
     labels.sort()
 
-    for feature in ['raw-compressed']:#, 'encoded-compressed']:
-        for train in ['data/beatles/*']:
+    for feature in ['raw-compressed', 'encoded-compressed']:
+        for train in ['data/beatles/']:
             
             trainVectors, trainLabels = loadData( train, feature )
             
@@ -315,7 +315,7 @@ if __name__=="__main__":
             
             plt.figure( figsize=(16, 8) )
             i = 1
-            for test in ['data/beatles/*']:#, 'data/uspop2002-npy']:
+            for test in ['data/beatles/', 'data/uspop2002-npy']:
                 
                 testVectors, testLabels   = loadData( test, feature )
                 
@@ -335,12 +335,9 @@ if __name__=="__main__":
                 confusion = sklearn.metrics.confusion_matrix( testLabels, predictedLabels ).astype(float)
                 confusion /= confusion.sum( axis=1, keepdims=True )
                 confusion = confusion[:,labelSort][labelSort,:]
-                plt.imshow( confusion, interpolation='nearest' )
+                plt.imshow( confusion, interpolation='nearest' , vmin=0.0, vmax=1.0)
                 plt.yticks( range( 25 ), labels )
                 plt.xticks( range( 25 ), labels, rotation=80 )
-                
-                plt.imshow( confusion, interpolation='nearest' , vmin=0.0, vmax=1.0)
-                plt.yticks( range( 25 ), labels ), plt.xticks( range( 25 ), labels, rotation=72 )
                 ylabel('True'), xlabel('Predicted')
                 plt.colorbar()
                 plt.title( "Train={}\nTest={}\nFeature={}".format( train, test, feature ) )
