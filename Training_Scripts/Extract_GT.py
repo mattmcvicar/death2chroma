@@ -1,19 +1,30 @@
 # Trains a model, given directory of chromaluma and GT
 
 # Parameters
-luma_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_luma_minmaj_labs/'
-GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
+luma_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/uspop2002-npy/'
+GT_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/USpoplabs_flat/'
+
+luma_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_luma_minmaj_labs/'
+GT_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
+
+# Alphabet
 alphabet = 'minmaj'
 
 # get filenames
 import os
 os.chdir('/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Training_Scripts')
 
-GT_files = os.listdir(GT_dir)
+GT_files = os.listdir(GT_dir_beatles); GT_files = [GT_dir_beatles + f for f in GT_files]
+GT_files_USpop = os.listdir(GT_dir_uspop); GT_files_USpop = [GT_dir_uspop + f for f in GT_files_USpop]
+GT_files.extend(GT_files_USpop)
+
 GT_files = [f for f in GT_files if os.path.splitext(f)[1] == '.lab']
 n_songs = len(GT_files)
 
-luma_files = os.listdir(luma_dir)
+luma_files = os.listdir(luma_dir_beatles); luma_files = [luma_dir_beatles + f for f in luma_files]
+luma_files_USpop = os.listdir(luma_dir_uspop); luma_files_USpop = [luma_dir_uspop + f for f in luma_files_USpop]
+luma_files.extend(luma_files_USpop)
+
 luma_feat_files = [f for f in luma_files if os.path.splitext(f)[0][-len('-CL'):] == '-CL']
 luma_beat_files = [f for f in luma_files if os.path.splitext(f)[0][-len('-beats'):] == '-beats']
 
@@ -27,7 +38,7 @@ all_chords = []
 for gt in GT_files:
 
   # Read file
-  lines = open(GT_dir + gt).readlines()
+  lines = open(gt).readlines()
   
   # Get chord labels
   chords = [chord.split()[2].rstrip() for chord in lines]  
@@ -43,6 +54,7 @@ chord_indices = list(set(all_chords))
 
 # Some of these will contain the same pitch classes. So make a map
 chord_classes = dict()
+print 'getting information on chords...'
 for chord in chord_indices:
     
   # get notes
@@ -67,8 +79,9 @@ filenames = []
 Beat_times = []
 for (index,gt) in enumerate(GT_files):
   
+  print 'Getting chord annotation for song: ' + str(index+1) + ' of ' + str(n_songs)
   # Read file
-  lines = open(GT_dir + gt).readlines()
+  lines = open(gt).readlines()
   
   # Get chord labels and times
   chords = [chord.split()[2].rstrip() for chord in lines]  
@@ -87,7 +100,7 @@ for (index,gt) in enumerate(GT_files):
     chord_numbers.append(chord_indices.index(chord_tuple))
     
   # Load up the corresponding beat times
-  beat_times = np.load(luma_dir + luma_beat_files[index])
+  beat_times = np.load(luma_beat_files[index])
   
   # Sample the beats
   annotation_sample_times = np.vstack((starts,ends))
@@ -99,20 +112,19 @@ for (index,gt) in enumerate(GT_files):
   
   filenames.append(gt[:-len('.lab')]+'-labels-'+alphabet)
   
-  
 # Save the annotations
-#save_dir = '../../Beatles_luma_minmaj_labs/'
-#for index,file in enumerate(filenames):
-#  np.save(save_dir+file,Annotations[index])
-  
+beatles_savedir = './beatles_indices/'
+uspop_savedir = './uspop_indices/'
+
+import re
+for index,file in enumerate(filenames):
+    
+  save_name = re.split('/',file)[-1]
+  if file[:len(GT_dir_beatles)] == GT_dir_beatles:
+    np.save(beatles_savedir + save_name, Annotations[index])
+  else:
+    np.save(uspop_savedir + save_name, Annotations[index])
+      
 # And the dictionary
-import pickle
-pickle.dump()
-
-
-# Test the print_ground_truth.py script
-sys.path.append("../")
-import print_ground_truth
-sdlfj
-print_ground_truth.print_ground_truth(Annotations[0], Beat_times[0], './test.lab',chord_classes, chord_indices)
-
+import cPickle
+cPickle.dump((chord_classes, chord_indices), open( "dict_" + alphabet + ".p", "wb" ) )
