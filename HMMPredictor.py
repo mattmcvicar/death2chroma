@@ -18,38 +18,45 @@ ROOT_DIR = '/home/bmcfee/git/death2chroma/'
 import numpy as np
 import pprint
 import scipy.linalg
+import functools
 
 # <codecell>
 
-def gaussian_prob( x, m, C, use_log=False ):
-    '''
-    % GAUSSIAN_PROB Evaluate a multivariate Gaussian density.
-    % p = gaussian_prob(X, m, C, use_log)
-    %
-    % p(i) = N(X(:,i), m, C) if use_log = 0 (default)
-    % p(i) = log N(X(:,i), m, C) if use_log = 1. This prevents underflow.
-    %
-    % If X has size dxN, then p has size Nx1, where N = number of examples
-    '''
+def model_gaussian(data, alpha=1e-4):
+    '''Fits a gaussian model to the data.
+    Returns a PDF function.
 
-    m = np.array( [m] ).flatten()                                                # if length(m)==1 % scalar
-    
-    if m.shape == ():
-        x = x.reshape( (1, x.shape[0]) )                                         # x = x(:)';
+    Arguments
+    ---------
+    data  - d-by-N array (each column is an observation)
+    alpha - (optional) smoothing parameter for the covariance matrix
 
-    d, N  = x.shape                                                              #[d N] = size(x);
-    m     = m.reshape( (-1, 1) )                                                 #m = m(:);
-    denom = np.sqrt( ((2*np.pi)**d)*np.abs( np.linalg.det( C ) ) )               #denom = (2*pi)^(d/2)*sqrt(abs(det(C)));
-    mahal = np.sum( np.dot( (x - m).T, np.linalg.inv( C ) )*(x - m).T, 1 )       #mahal = sum(((x-M)'*inv(C)).*(x-M)',2);   % Chris Bregler's trick
+    Returns
+    -------
+    pdf(test_data, use_log=False) - function to evaluate the (log-)likelihood of test data
+    '''
     
-    if (mahal < 0).any():                                                        #if any(mahal<0)
-        print 'mahal < 0 => C is not psd'
+    d, N  = data.shape
+    
+    mu    = data.mean(axis=1)
+    sigma = alpha * np.eye(d) + np.cov(data)
+    
+    precision = np.linalg.inv(sigma)
+    sigma_det = np.linalg.det(sigma)
+    logZ      = 0.5 * (np.log(np.abs(sigma_det)) + d * np.log( 2 * np.pi ) )
+    
+    def pdf(x, use_log=False):
+        xhat  = x.T - mu
+        mahal = np.sum( np.dot( xhat, precision )*xhat, 1 )
         
-    if use_log:
-        p = -0.5*mahal - np.log( denom )                                         #p = -0.5*mahal - log(denom);
-    else:
-        p = np.exp( -0.5*mahal )/(denom + 2.2204e-16)                            #p = exp(-0.5*mahal) / (denom+eps);
-    return p
+        ll    = -0.5 * mahal - logZ
+        
+        if use_log:
+            return ll
+        else:
+            return np.exp( ll + 1e-16)
+        
+    return pdf
 
 # <codecell>
 
@@ -107,9 +114,8 @@ def recognize_chords(Chroma, Models, Transitions, Priors):
     #% evaluate each frame under all models
     
     for j in xrange( nmodels ):                                       #for j = 1:nmodels;
-        #Liks(j,:) = gaussian_prob(Chroma, Models(j).mean, Models(j).sigma); 
-        Liks[j, :] = gaussian_prob( Chroma, Models[j]['mean'], Models[j]['sigma'] )
-    
+        Liks[j, :] = Models[j](Chroma)
+        
     #% Evaluate viterbi path
     Labels = viterbi_path( Priors, Transitions, Liks )
     
@@ -118,7 +124,7 @@ def recognize_chords(Chroma, Models, Transitions, Priors):
 
 # <codecell>
 
-def train_chord_models(Features, Labels):
+def train_chord_models(Features, Labels, DIST=model_gaussian):
     '''
     % [Models, Transitions, Priors] = train_chord_models(TrainFileList)
     %     Train single-Gaussian models of chords by loading the Chroma
@@ -135,31 +141,21 @@ def train_chord_models(Features, Labels):
     
     #% global mean/covariance used for empty models
     
-    globalmean = np.mean( Features, axis = 1 )          #globalmean = mean(Features')';
-    globalcov  = np.cov( Features )                     #globalcov = cov(Features')';
+    global_model = DIST(Features)
     
-    Models     = {}
+    Models     = []
     
     #% Individual models for all chords
     
     for i in xrange( nmodels ):                         #for i = 1:nmodels
-        Models[i] = {}
+        #Models.append({})
         
         examples = np.flatnonzero( Labels == i )        #examples = find(Labels == i-1);  % labels are 0..24
         
         if examples.shape[0] > 0:                       #if length(examples) > 0
-            #% mean and cov expect data in columns, not rows - transpose twice
-            #Models(i).mean = mean(Features(:,examples)')';
-            #Models(i).sigma = cov(Features(:,examples)')';
-            
-            Models[i]['mean']  = np.mean( Features[:, examples], axis = 1 )
-            Models[i]['sigma'] = np.cov(  Features[:, examples] )
+            Models.append(DIST(Features[:, examples]))
         else:
-            #Models(i).mean = globalmean;
-            #Models(i).sigma = globalcov;
-            
-            Models[i]['mean']  = globalmean
-            Models[i]['sigma'] = globalcov;
+            Models.append(global_model)
     
     #% Count the number of transitions in the label set
     # FIXME: this needs to operate on a per-song level
@@ -281,8 +277,8 @@ if __name__=="__main__":
         vMax = np.max( vectors, axis=1 )
         return ((vectors.T - vMin)/(vMax - vMin)).T
 
-    #for feature in ['encoded-compressed', 'raw-compressed', 'wrapCL']:
-    for feature in ['encoded-compressed']:
+    for feature in ['encoded-compressed', 'raw-compressed', 'wrapCL']:
+    #for feature in ['raw-compressed']:
         for train in ['data/beatles/*']:
             trainVectors, trainLabels = loadData( train, feature )
             
