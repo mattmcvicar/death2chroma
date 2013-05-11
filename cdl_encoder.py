@@ -38,7 +38,7 @@ def process_song(song, coder):
     X = np.load(song)
 
     # Pad out dimension
-    X = X.reshape((X.shape[0], X.shape[1], 1), order='A')
+    X = X.reshape((X.shape[0], 1, X.shape[1]), order='A')
 
     # Encode the frames
     A = coder.transform(X)
