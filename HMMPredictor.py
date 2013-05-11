@@ -250,10 +250,9 @@ def viterbi_path(prior, transmat, obslik):
         #for j in xrange( Q ):
         #[delta(j,t), psi(j,t)] = max(delta(:,t-1) .* transmat(:,j));
         dt = (delta[:, t-1]*transmat.T).T
-        psi[:, t] = np.argmax( dt, axis=1 )
-        delta[:, t] = dt[psi[:, t], range(Q)]
+        psi[:, t] = np.argmax( dt, axis=0 )
         #delta(j,t) = delta(j,t) * obslik(j,t);
-        delta[:, t] *= obslik[:, t]
+        delta[:, t] = dt[psi[:, t], range(Q)]*obslik[:, t]
         if scaled:
             #[delta(:,t), n] = normalise(delta(:,t));
             delta[:, t], n = normalise( delta[:, t] )
