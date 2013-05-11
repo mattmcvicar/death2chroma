@@ -168,14 +168,18 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
         for s_from, s_to in zip(song_labels[:-1], song_labels[1:]):
             Transitions[s_from, s_to] += 1.0
     
+    #% priors of each chord
+    #Priors = sum(Transitions,2);
+    
+    # FIXME: it's not all that justified to use the bias of each chord as the initial state
+    # distribution: most songs start with a NO-CHORD, and we should exploit that.
+    Priors = Transitions.sum(axis=1)
+    
     # Normalize the rows of the transition matrix
     Transitions = Transitions.dot(np.diag(Transitions.sum(axis=1)**-1))
     
     # Normalize the priors
     Priors = Priors / Priors.sum()
-    
-    #% priors of each chord
-    #Priors = sum(Transitions,2);
     
     #Priors = np.sum( Transitions, axis=1, keepdims=True )
     
@@ -185,6 +189,14 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
     
     #% normalize priors too
     #Priors /= Priors.sum()                                          #Priors = Priors/sum(Priors);
+    
+    figure(figsize=(16,8))
+    subplot(121)
+    bar(range(len(Priors)), Priors), axis('tight'), title('Initial-state distribution')
+    subplot(122)
+    imshow(Transitions, aspect='auto', interpolation='none', vmin=0, vmax=1.0), colorbar()
+    title('Transition matrix')
+    
     return Models, Transitions, Priors
 
 # <codecell>
@@ -289,7 +301,7 @@ if __name__=="__main__":
         
     labels = [chord_classes[chord_keys[i]][0] for i in xrange(25)]
 
-    for feature in ['encoded-compressed', 'raw-compressed']:
+    for feature in ['raw-compressed']:#, 'encoded-compressed']:
         for train in ['data/beatles/*']:
             
             trainVectors, trainLabels = loadData( train, feature )
