@@ -66,7 +66,7 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     smoothingWindow = kwargs.get( 'smoothingWindow', np.hanning( binsPerOctave ) )
     smoothingPower = kwargs.get( 'smoothingPower', 3.0 )
     aWeight = kwargs.get( 'aWeight', False )
-    takeLog = kwargs.get( 'takeLog', True )
+    takeLog = kwargs.get( 'takeLog', False )
     
     minFreq = librosa.feature.midi_to_hz( minNote )
     
