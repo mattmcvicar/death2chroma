@@ -45,3 +45,5 @@ Thumbs.db
 
 # IPython
 *.ipynb
+# numpy files
+*.npy

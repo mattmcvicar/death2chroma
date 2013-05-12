@@ -18,6 +18,7 @@ ROOT_DIR = '.'
 import numpy as np
 import pprint
 import scipy.linalg
+import matplotlib.pyplot as plt
 
 # <codecell>
 
@@ -190,12 +191,12 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
     #% normalize priors too
     #Priors /= Priors.sum()                                          #Priors = Priors/sum(Priors);
     
-    figure(figsize=(16,8))
-    subplot(121)
-    bar(range(len(Priors)), Priors), axis('tight'), title('Initial-state distribution')
-    subplot(122)
-    imshow(Transitions, aspect='auto', interpolation='none', vmin=0, vmax=1.0), colorbar()
-    title('Transition matrix')
+    plt.figure(figsize=(16,8))
+    plt.subplot(121)
+    plt.bar(range(len(Priors)), Priors), plt.axis('tight'), plt.title('Initial-state distribution')
+    plt.subplot(122)
+    plt.imshow(Transitions, aspect='auto', interpolation='nearest', vmin=0, vmax=1.0), plt.colorbar()
+    plt.title('Transition matrix')
     
     return Models, Transitions, Priors
 
@@ -338,9 +339,10 @@ if __name__=="__main__":
                 plt.imshow( confusion, interpolation='nearest' , vmin=0.0, vmax=1.0)
                 plt.yticks( range( 25 ), labels )
                 plt.xticks( range( 25 ), labels, rotation=80 )
-                ylabel('True'), xlabel('Predicted')
+                plt.ylabel('True'), plt.xlabel('Predicted')
                 plt.colorbar()
                 plt.title( "Train={}\nTest={}\nFeature={}".format( train, test, feature ) )
                 i = i + 1
+    plt.show()
 pass
 
