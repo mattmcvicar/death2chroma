@@ -4,7 +4,7 @@ CREATED:2013-05-08 16:15:55 by Brian McFee <brm2132@columbia.edu>
 
 Usage:
 
-./cdl_compress.py n_jobs pca_model.pickle /path/to/octarines
+./cdl_compress.py n_jobs pca_model.pickle /path/to/octarines/glob
 
 Once we have a PCA model and a set of -encoded.npy files, use PCA to compress them.
 
@@ -54,5 +54,5 @@ if __name__ == '__main__':
     with open(sys.argv[2], 'r') as f:
         PCA = pickle.load(f)
 
-    file_glob = '%s/*/*-encoded.npy' % sys.argv[3]
+    file_glob = sys.argv[3]
     process_data(n_jobs, PCA, file_glob)

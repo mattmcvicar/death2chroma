@@ -4,7 +4,7 @@ CREATED:2013-05-08 16:15:55 by Brian McFee <brm2132@columbia.edu>
 
 Usage:
 
-./cdl_pca_fit.py output_pca_model.pickle /path/to/octarines
+./cdl_pca_fit.py output_pca_model.pickle /path/to/octarines/glob
 
 """
 
@@ -21,7 +21,7 @@ def vectorize(A):
 
 def learn_pca(inpath):
 
-    files = glob.glob('%s/*/*-encoded.npy' % inpath)
+    files = glob.glob(inpath)
     files.sort()
 
     A = None
