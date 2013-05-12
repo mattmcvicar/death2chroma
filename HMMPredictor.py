@@ -11,7 +11,7 @@ http://www.ee.columbia.edu/~dpwe/e4896/code/prac10/chords_code.zip
 # <codecell>
 
 # Where does the repo live?
-ROOT_DIR = '/home/bmcfee/git/death2chroma'
+ROOT_DIR = '.'
 
 # <codecell>
 
@@ -181,6 +181,7 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
     % 2010-04-07 Dan Ellis dpwe@ee.columbia.edu  after extractFeaturesAndTrain.m
     '''
     
+    
     Labels_FLAT   = np.hstack( Labels )
     Features      = np.hstack(Features)
     # I'm not calculating a specific number of models - infer it from the labels.
@@ -210,11 +211,13 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
         for s_from, s_to in zip(song_labels[:-1], song_labels[1:]):
             Transitions[s_from, s_to] += 1.0
     
+    #Initial = Transitions.sum(axis=0)
     # Normalize the rows of the transition matrix
     Transitions = Transitions.dot(np.diag(Transitions.sum(axis=1)**-1))
     
     # Normalize the initial state distribution
     Initial = Initial / Initial.sum()
+    
     
     plt.figure(figsize=(16,8))
     plt.subplot(121)
@@ -314,12 +317,78 @@ def wrapToChroma( vectors ):
 
 # <codecell>
 
+def chromaluma_to_chroma(CL, use100=False):
+    ''' Convert a matrix of chroma-luma vectors into chroma
+
+    Arguments
+    ---------
+    CL : d-by-N matrix of CL vectors
+
+    use100 : bool should we append 100hz-centered bass chroma?
+
+
+    Returns
+    -------
+    Chroma : 12-by-N
+    '''
+    #% Adapting tuning - find which eighth-tone has the most peaks
+    #[vv,xx] = max(Data);
+    #semisoff = 0.9 - (mean(mod(xx+1,4)) - 1.5);
+
+    xx = (np.argmax(CL, axis=0) + 2).astype(int)
+    semis_off = 0.9 - np.mean(np.mod(xx, 4)) + 1.5
+    
+    d, N = CL.shape
+    MM = np.zeros( (12, d) )
+    for i in range(12):
+        MM[i] = np.exp(-0.5 * ( ( 1 - (0.5 + 0.5 * np.cos((( -4 * i + semis_off) + np.arange(d))/48 * 2 * np.pi)))/ 0.001)**2)
+                       
+    Chroma = MM.dot(CL)
+    
+    if use100:
+        wts = np.exp(-0.5 * ((np.arange(d) - 12) /  24)**2)
+        Chroma = np.vstack([Chroma, MM.dot(np.diag(wts).dot(CL))])
+        
+    # Normalize chroma vectors
+    Chroma = Chroma ** 0.25
+    #Chroma = Chroma - Chroma.min(axis=0)
+    z = np.max(Chroma, axis=0) + 1e-5
+    Chroma = Chroma / z
+    
+    return Chroma
+
+# <codecell>
+
+def evaluate_model(Models, Transitions, Initial, testVectors, testLabels):
+    predictedLabels = []
+    for tv in testVectors:
+        predictedLabels.extend(recognize_chords( tv, Models, Transitions, Initial )[0])
+    
+    testLabels = np.hstack(testLabels)
+    
+    print "######## Train={}, Test={}, Feature={}".format( train, test, feature )
+    print sklearn.metrics.classification_report( testLabels, predictedLabels, target_names=labels )
+    
+    #plt.subplot(1,2,i)
+    confusion = sklearn.metrics.confusion_matrix( testLabels, predictedLabels ).astype(float)
+    confusion /= confusion.sum( axis=1, keepdims=True )
+    confusion = confusion[:,labelSort][labelSort,:]
+    plt.imshow( confusion, interpolation='nearest' , vmin=0.0, vmax=1.0)
+    plt.yticks( range( 25 ), labels )
+    plt.xticks( range( 25 ), labels, rotation=80 )
+    plt.ylabel('True'), plt.xlabel('Predicted')
+    plt.colorbar()
+    plt.title( "Train={}\nTest={}\nFeature={}".format( train, test, feature ) )
+
+# <codecell>
+
 if __name__=="__main__":
     
     import os
     import glob
     import scipy.io
     import sklearn.metrics
+    import sklearn.cross_validation
     import pickle
     
     MODEL = model_gaussian
@@ -331,44 +400,42 @@ if __name__=="__main__":
     labelSort = [i for (v, i) in sorted((v, i) for (i, v) in enumerate(labels))]
     labels.sort()
 
-    for feature in ['raw-compressed']:#, 'encoded-compressed']:
+    for feature in ['CL-magnitude']:#['wrapCL']:#['raw-compressed']:#, 'encoded-compressed']:
         for train in ['data/beatles/']:
             
             trainVectors, trainLabels = loadData( train, feature )
-            
+        
             if feature == 'wrapCL':
-                trainVectors = wrapToChroma( trainVectors )
-                
-            Models, Transitions, Initial = train_chord_models( trainVectors, trainLabels, DIST=MODEL )
+                trainVectors = map(wrapToChroma, trainVectors)
+            elif feature == 'CL-magnitude':
+                trainVectors = map(chromaluma_to_chroma, trainVectors)
             
             plt.figure( figsize=(16, 8) )
+            
+            i = 1
+            for i_train, i_test in sklearn.cross_validation.ShuffleSplit(len(trainLabels), n_iterations=5, test_size=0.2):
+                
+                Models, Transitions, Initial = train_chord_models([trainVectors[i] for i in i_train], 
+                                                                  [trainLabels[i] for i in i_train], DIST=MODEL )
+                plt.figure()
+                evaluate_model(Models, Transitions, Initial, [trainVectors[i] for i in i_test], 
+                                                             [trainLabels[i] for i in i_test])
+            
+            
+            plt.figure( figsize=(16, 8) )
+            Models, Transitions, Initial = train_chord_models( trainVectors, trainLabels, DIST=MODEL )
+            
             i = 1
             for test in ['data/beatles/']:#, 'data/uspop2002-npy']:
                 
                 testVectors, testLabels   = loadData( test, feature )
                 
                 if feature == 'wrapCL':
-                    testVectors = wrapToChroma( testVectors )
+                    testVectors = map(wrapToChroma, testVectors)
+                elif feature == 'CL-magnitude':
+                    testVectors = map(chromaluma_to_chroma, testVectors)
                 
-                predictedLabels = []
-                for tv in testVectors:
-                    predictedLabels.extend(recognize_chords( tv, Models, Transitions, Initial )[0])
-                
-                testLabels = np.hstack(testLabels)
-                
-                print "######## Train={}, Test={}, Feature={}".format( train, test, feature )
-                print sklearn.metrics.classification_report( testLabels, predictedLabels, target_names=labels )
-                
-                plt.subplot(1,2,i)
-                confusion = sklearn.metrics.confusion_matrix( testLabels, predictedLabels ).astype(float)
-                confusion /= confusion.sum( axis=1, keepdims=True )
-                confusion = confusion[:,labelSort][labelSort,:]
-                plt.imshow( confusion, interpolation='nearest' , vmin=0.0, vmax=1.0)
-                plt.yticks( range( 25 ), labels )
-                plt.xticks( range( 25 ), labels, rotation=80 )
-                plt.ylabel('True'), plt.xlabel('Predicted')
-                plt.colorbar()
-                plt.title( "Train={}\nTest={}\nFeature={}".format( train, test, feature ) )
+                evaluate_model(Models, Transitions, Initial, testVectors, testLabels)
                 i = i + 1
     plt.show()
 pass
