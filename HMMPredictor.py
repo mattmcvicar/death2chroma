@@ -22,19 +22,64 @@ import matplotlib.pyplot as plt
 
 # <codecell>
 
-def model_gaussian(data, alpha=1e-4):
+import sklearn.linear_model
+import sklearn.cross_validation
+import sklearn.grid_search
+
+# <codecell>
+
+def model_logistic(data, labels):
+    
+    n_classes = np.unique(labels).size
+    
+    # If there's only one class, there's nothing to discriminate
+    if n_classes < 2:
+        return lambda x: 1
+        
+    splitter = sklearn.cross_validation.StratifiedKFold(labels, 3)
+    
+    parameters_sgd = {'alpha': [1e-7,1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1],
+                      'class_weight': ['auto'], 'n_iter': [2], 'shuffle': [True]}
+    
+    h = sklearn.grid_search.GridSearchCV( sklearn.linear_model.SGDClassifier(loss='log'),
+                                          parameters_sgd, n_jobs=4, cv=splitter)
+    
+    h.fit(data.T, labels)
+    
+    classifier = h.best_estimator_
+    class_probability = np.mean(labels)
+    
+    def pdf(X, use_log=False):
+        '''Returns p(y | x) / p(y)'''
+        
+        P = classifier.predict_proba(X.T) / class_probability
+        
+        if use_log:
+            return np.log(P)
+        else:
+            return P
+        
+    return pdf
+
+# <codecell>
+
+def model_gaussian(data, labels, alpha=1e-4):
     '''Fits a gaussian model to the data.
     Returns a PDF function.
 
     Arguments
     ---------
     data  - d-by-N array (each column is an observation)
+    labels - N array of booleans indicating which data points to include
     alpha - (optional) smoothing parameter for the covariance matrix
 
     Returns
     -------
     pdf(test_data, use_log=False) - function to evaluate the (log-)likelihood of test data
     '''
+    
+    # Grab the relevant data
+    data  = data[:,labels]
     
     d, N  = data.shape
     
@@ -94,7 +139,7 @@ def normalise(A, dim=None):
 
 # <codecell>
 
-def recognize_chords(Chroma, Models, Transitions, Priors):
+def recognize_chords(Chroma, Models, Transitions, Initial):
     '''
     % [Labels,Liks] = recognize_chords(Chroma, Models, Transitions)
     %     Take a 12xN array of chroma features Chroma, an array of 
@@ -117,7 +162,7 @@ def recognize_chords(Chroma, Models, Transitions, Priors):
         Liks[j, :] = Models[j](Chroma)
         
     #% Evaluate viterbi path
-    Labels = viterbi_path( Priors, Transitions, Liks )
+    Labels = viterbi_path( Initial, Transitions, Liks )
     
     #% Make the labels be 0..24 
     return Labels, Liks
@@ -126,7 +171,7 @@ def recognize_chords(Chroma, Models, Transitions, Priors):
 
 def train_chord_models(Features, Labels, DIST=model_gaussian):
     '''
-    % [Models, Transitions, Priors] = train_chord_models(TrainFileList)
+    % [Models, Transitions, Initial] = train_chord_models(TrainFileList)
     %     Train single-Gaussian models of chords by loading the Chroma
     %     features and the corresponding chord label data from each of
     %     the items named in the TrainFileList cell array.  Return
@@ -136,79 +181,62 @@ def train_chord_models(Features, Labels, DIST=model_gaussian):
     % 2010-04-07 Dan Ellis dpwe@ee.columbia.edu  after extractFeaturesAndTrain.m
     '''
     
+    
     Labels_FLAT   = np.hstack( Labels )
     Features      = np.hstack(Features)
     # I'm not calculating a specific number of models - infer it from the labels.
-    nmodels = np.unique( Labels_FLAT ).shape[0]
+    nmodels = np.unique( Labels_FLAT ).size
     
     #% global mean/covariance used for empty models
-    
-    global_model = DIST(Features)
-    
+    global_model = DIST(Features, np.ones(Features.shape[1], dtype=bool))
+        
     Models     = []
     
     #% Individual models for all chords
     
-    for i in xrange( nmodels ):                         #for i = 1:nmodels
-        #Models.append({})
-        
-        examples = np.flatnonzero( Labels_FLAT == i )        #examples = find(Labels == i-1);  % labels are 0..24
-        
-        if examples.shape[0] > 0:                       #if length(examples) > 0
-            Models.append(DIST(Features[:, examples]))
+    for i in xrange( nmodels ):
+        mask = Labels_FLAT == i
+        if mask.any():
+            Models.append(DIST(Features, mask))
         else:
             Models.append(global_model)
     
     #% Count the number of transitions in the label set
     
     Transitions = np.ones( (nmodels, nmodels), dtype=float )
-    Priors      = np.ones( nmodels, dtype=float)
+    Initial      = np.ones( nmodels, dtype=float)
     
     for song_labels in Labels:
-        Priors[song_labels[0]] += 1.0
+        Initial[song_labels[0]] += 1.0
         for s_from, s_to in zip(song_labels[:-1], song_labels[1:]):
             Transitions[s_from, s_to] += 1.0
     
-    #% priors of each chord
-    #Priors = sum(Transitions,2);
-    
-    # FIXME: it's not all that justified to use the bias of each chord as the initial state
-    # distribution: most songs start with a NO-CHORD, and we should exploit that.
-    #Priors = Transitions.sum(axis=1)
-    
+    #Initial = Transitions.sum(axis=0)
     # Normalize the rows of the transition matrix
     Transitions = Transitions.dot(np.diag(Transitions.sum(axis=1)**-1))
     
-    # Normalize the priors
-    Priors = Priors / Priors.sum()
+    # Normalize the initial state distribution
+    Initial = Initial / Initial.sum()
     
-    #Priors = np.sum( Transitions, axis=1, keepdims=True )
-    
-    #% normalize each row
-    #Transitions = Transitions./repmat(Priors,1,nmodels);
-    #Transitions = Transitions/np.tile( Priors, (1, nmodels) )
-    
-    #% normalize priors too
-    #Priors /= Priors.sum()                                          #Priors = Priors/sum(Priors);
     
     plt.figure(figsize=(16,8))
     plt.subplot(121)
-    plt.bar(range(len(Priors)), Priors), plt.axis('tight'), plt.title('Initial-state distribution')
+    plt.bar(range(len(Initial)), Initial), plt.axis('tight'), plt.title('Initial-state distribution')
     plt.subplot(122)
     plt.imshow(Transitions, aspect='auto', interpolation='nearest', vmin=0, vmax=1.0), plt.colorbar()
     plt.title('Transition matrix')
     
-    return Models, Transitions, Priors
+    return Models, Transitions, Initial
 
 # <codecell>
 
-def viterbi_path(prior, transmat, obslik):
+def viterbi_path(initial, transmat, obslik):
     '''
     % VITERBI Find the most-probable (Viterbi) path through the HMM state trellis.
-    % path = viterbi(prior, transmat, obslik)
+    % path = viterbi(initial, transmat, obslik)
     %
     % Inputs:
-    % prior(i) = Pr(Q(1) = i)
+    % initial(i) = Pr(Q(1) = i)
     % transmat(i,j) = Pr(Q(t+1)=j | Q(t)=i)
     % obslik(i,t) = Pr(y(t) | Q(t)=i)
     %
@@ -224,7 +252,7 @@ def viterbi_path(prior, transmat, obslik):
     
     T = obslik.shape[1]                            #T     = size(obslik, 2);
                                                    #prior = prior(:);
-    Q = prior.shape[0]                             #Q     = length(prior);
+    Q = initial.shape[0]                             #Q     = length(prior);
     
     
     delta = np.zeros( (Q, T) )                     #delta = zeros(Q,T);
@@ -234,7 +262,7 @@ def viterbi_path(prior, transmat, obslik):
     
     t = 0
     
-    delta[:, t] = prior*obslik[:, t]               #delta(:,t) = prior .* obslik(:,t);
+    delta[:, t] = initial*obslik[:, t]               #delta(:,t) = prior .* obslik(:,t);
     if scaled:
         delta[:, t], n = normalise( delta[:, t] )  #[delta(:,t), n] = normalise(delta(:,t));
         
@@ -289,14 +317,82 @@ def wrapToChroma( vectors ):
 
 # <codecell>
 
+def chromaluma_to_chroma(CL, use100=False):
+    ''' Convert a matrix of chroma-luma vectors into chroma
+
+    Arguments
+    ---------
+    CL : d-by-N matrix of CL vectors
+
+    use100 : bool should we append 100hz-centered bass chroma?
+
+
+    Returns
+    -------
+    Chroma : 12-by-N
+    '''
+    #% Adapting tuning - find which eighth-tone has the most peaks
+    #[vv,xx] = max(Data);
+    #semisoff = 0.9 - (mean(mod(xx+1,4)) - 1.5);
+
+    xx = (np.argmax(CL, axis=0) + 2).astype(int)
+    semis_off = 0.9 - np.mean(np.mod(xx, 4)) + 1.5
+    
+    d, N = CL.shape
+    MM = np.zeros( (12, d) )
+    for i in range(12):
+        MM[i] = np.exp(-0.5 * ( ( 1 - (0.5 + 0.5 * np.cos((( -4 * i + semis_off) + np.arange(d))/48 * 2 * np.pi)))/ 0.001)**2)
+                       
+    Chroma = MM.dot(CL)
+    
+    if use100:
+        wts = np.exp(-0.5 * ((np.arange(d) - 12) /  24)**2)
+        Chroma = np.vstack([Chroma, MM.dot(np.diag(wts).dot(CL))])
+        
+    # Normalize chroma vectors
+    Chroma = Chroma ** 0.25
+    #Chroma = Chroma - Chroma.min(axis=0)
+    z = np.max(Chroma, axis=0) + 1e-5
+    Chroma = Chroma / z
+    
+    return Chroma
+
+# <codecell>
+
+def evaluate_model(Models, Transitions, Initial, testVectors, testLabels):
+    predictedLabels = []
+    for tv in testVectors:
+        predictedLabels.extend(recognize_chords( tv, Models, Transitions, Initial )[0])
+    
+    testLabels = np.hstack(testLabels)
+    
+    print "######## Train={}, Test={}, Feature={}".format( train, test, feature )
+    print sklearn.metrics.classification_report( testLabels, predictedLabels, target_names=labels )
+    
+    #plt.subplot(1,2,i)
+    confusion = sklearn.metrics.confusion_matrix( testLabels, predictedLabels ).astype(float)
+    confusion /= confusion.sum( axis=1, keepdims=True )
+    confusion = confusion[:,labelSort][labelSort,:]
+    plt.imshow( confusion, interpolation='nearest' , vmin=0.0, vmax=1.0)
+    plt.yticks( range( 25 ), labels )
+    plt.xticks( range( 25 ), labels, rotation=80 )
+    plt.ylabel('True'), plt.xlabel('Predicted')
+    plt.colorbar()
+    plt.title( "Train={}\nTest={}\nFeature={}".format( train, test, feature ) )
+
+# <codecell>
+
 if __name__=="__main__":
     
     import os
     import glob
     import scipy.io
     import sklearn.metrics
+    import sklearn.cross_validation
     import pickle
     
+    MODEL = model_gaussian
+    #MODEL = model_logistic
     with open( os.path.join(ROOT_DIR, 'Training_Scripts/minmaj_dict.pickle' )) as f:
         chord_classes, chord_keys = pickle.load( f )
         
@@ -304,44 +400,42 @@ if __name__=="__main__":
     labelSort = [i for (v, i) in sorted((v, i) for (i, v) in enumerate(labels))]
     labels.sort()
 
-    for feature in ['raw-compressed', 'encoded-compressed']:
+    for feature in ['CL-magnitude']:#['wrapCL']:#['raw-compressed']:#, 'encoded-compressed']:
         for train in ['data/beatles/']:
             
             trainVectors, trainLabels = loadData( train, feature )
-            
+        
             if feature == 'wrapCL':
-                trainVectors = wrapToChroma( trainVectors )
-                
-            Models, Transitions, Priors = train_chord_models( trainVectors, trainLabels, DIST=model_gaussian )
+                trainVectors = map(wrapToChroma, trainVectors)
+            elif feature == 'CL-magnitude':
+                trainVectors = map(chromaluma_to_chroma, trainVectors)
             
             plt.figure( figsize=(16, 8) )
+            
             i = 1
-            for test in ['data/beatles/', 'data/uspop2002-npy']:
+            for i_train, i_test in sklearn.cross_validation.ShuffleSplit(len(trainLabels), n_iterations=5, test_size=0.2):
+                
+                Models, Transitions, Initial = train_chord_models([trainVectors[i] for i in i_train], 
+                                                                  [trainLabels[i] for i in i_train], DIST=MODEL )
+                plt.figure()
+                evaluate_model(Models, Transitions, Initial, [trainVectors[i] for i in i_test], 
+                                                             [trainLabels[i] for i in i_test])
+            
+            
+            plt.figure( figsize=(16, 8) )
+            Models, Transitions, Initial = train_chord_models( trainVectors, trainLabels, DIST=MODEL )
+            
+            i = 1
+            for test in ['data/beatles/']:#, 'data/uspop2002-npy']:
                 
                 testVectors, testLabels   = loadData( test, feature )
                 
                 if feature == 'wrapCL':
-                    testVectors = wrapToChroma( testVectors )
+                    testVectors = map(wrapToChroma, testVectors)
+                elif feature == 'CL-magnitude':
+                    testVectors = map(chromaluma_to_chroma, testVectors)
                 
-                predictedLabels = []
-                for tv in testVectors:
-                    predictedLabels.extend(recognize_chords( tv, Models, Transitions, Priors )[0])
-                
-                testLabels = np.hstack(testLabels)
-                
-                print "######## Train={}, Test={}, Feature={}".format( train, test, feature )
-                print sklearn.metrics.classification_report( testLabels, predictedLabels, target_names=labels )
-                
-                plt.subplot(1,2,i)
-                confusion = sklearn.metrics.confusion_matrix( testLabels, predictedLabels ).astype(float)
-                confusion /= confusion.sum( axis=1, keepdims=True )
-                confusion = confusion[:,labelSort][labelSort,:]
-                plt.imshow( confusion, interpolation='nearest' , vmin=0.0, vmax=1.0)
-                plt.yticks( range( 25 ), labels )
-                plt.xticks( range( 25 ), labels, rotation=80 )
-                plt.ylabel('True'), plt.xlabel('Predicted')
-                plt.colorbar()
-                plt.title( "Train={}\nTest={}\nFeature={}".format( train, test, feature ) )
+                evaluate_model(Models, Transitions, Initial, testVectors, testLabels)
                 i = i + 1
     plt.show()
 pass

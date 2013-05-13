@@ -32,7 +32,7 @@ def load_cdl(path):
 def process_song(song, coder):
 
     songname = os.path.basename(song)
-    songname = songname[:songname.index('-CL.npy')]
+    songname = songname[:songname.index('-CL-magnitude.npy')]
 
     print songname
     X = np.load(song)

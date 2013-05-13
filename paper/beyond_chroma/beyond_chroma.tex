@@ -1,0 +1,127 @@
+% -----------------------------------------------
+% Template for ISMIR 2013
+% (based on earlier ISMIR templates)
+% -----------------------------------------------
+
+\documentclass{article}
+\usepackage{ismir2013,amsmath,cite}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage[hypcap=false]{caption}
+\usepackage{subcaption}
+\usepackage{floatrow}
+\usepackage{array}
+\usepackage{booktabs}
+
+\usepackage{color}
+
+% Title.
+% ------
+%\title{Beyond Chroma: Convolutive Dictionary Learning for Chord Recognition}
+\title{Beyond Chroma: \\The Octarine Feature for Chord Recognition}
+
+% Single address
+% To use with only one author or several with the same address
+% ---------------
+%\oneauthor
+% {Names should be omitted for double-blind reviewing}
+% {Affiliations should be omitted for double-blind reviewing}
+
+% Two addresses
+% --------------
+%\twoauthors
+%  {First author} {School \\ Department}
+%  {Second author}  {School \\ Department}
+
+% Three addresses
+% --------------
+%\threeauthors
+ % {First author} {Affiliation1 \\ {\tt author1@ismir.edu}}
+  %{Second author} {\bf Retain these fake authors in\\\bf submission to preserve the formatting}
+  %{Third author} {Affiliation3 \\ {\tt author3@ismir.edu}}
+
+% Four addresses
+% --------------
+\fourauthors
+  {First author}{Affiliation1 \\ {\tt author1@ismir.edu}}
+  {Second author}{Affiliation2 \\ {\tt author2@ismir.edu}}
+  {Third author} {Affiliation3 \\ {\tt author3@ismir.edu}}
+  {Fourth author} {Affiliation4 \\ {\tt author4@ismir.edu}}
+\begin{document}
+%
+\maketitle
+%
+\begin{abstract}
+Chord recognition from music audio has emerged as a popular and useful task in 
+the past few years.  Almost all systems are based on so-called chroma representations, 
+where the signal spectrum is collapsed onto a single octave (typically with just twelve 
+bins) to achieve invariance to octave, instrumentation, and inversion of chords.  However, 
+chroma representations eliminate information on the height (octave) of constituent notes 
+that is important to the identity of chords, particularly when we venture beyond the 
+minimal set of major and minor triads.  In this paper, we investigate chord recognition based 
+on a representation of the full spectrum, so that differences in octave may be preserved.  
+We investigate derived representations that attempt to normalize broad spectral variation, then 
+remove redundancy in the features by learning efficient bases from the training data.  We 
+evaluate variations on these features in comparison to traditional chroma features using an 
+HMM chord recognizer on a standard chord database.\footnote{Authors appear in alphabetical order.}
+
+%In particular, we learn a convolutive dictionary over a semitone-axis beat-segment spectrum, 
+%so that common patterns can be identified independent of the root note or transposition, but still
+%spanning multiple octaves.  We use various features derived from the activations of this dictionary 
+%as inputs to a chord recognition system.  We show that including the richer information in the 
+%full semitone-axis spectrum can improve chord recognition from (say) 75\% to XX\% on a 
+%common evaluation database.
+\end{abstract}
+%
+%-------------------------------------
+\section{Introduction}\label{sec:introduction}
+%-------------------------------------
+Contemporary popular music relies heavily on the conventions of Western harmony.  
+
+\subsection{Background}\label{sub:background}
+[talk about chords. Applications to cover song ID, key estimation, hit song science etc. Availability of data is now such that new features needed to avoid overfitting. Go beyond the octave for jazz etc. Full spectrum probably too large to deal with. ]
+
+\subsection{Motivation and Contributions}\label{sub:motivation}
+[Contribution is new feature, plug into a standard HMM and see imrovements.]
+
+%-------------------------------------
+\section{Feature Extraction}\label{sec:features}
+%-------------------------------------
+[Feature pipeline and mathematics]
+
+%-------------------------------------
+\section{Model Description}\label{sec:model}
+%-------------------------------------
+\subsection{HMM Architecture}\label{sub:hmm}
+[standard hidden chord state model, 1st order Markov on chords, Gaussian on emissions. ]
+
+\subsection{Parameter Estimation}\label{sub:params}
+[MLE from training data.]
+
+%-------------------------------------
+\section{Experiments}\label{sec:exp}
+%-------------------------------------
+\subsection{Datasets}\label{sub:data}
+[Beatles, USpop]
+
+\subsection{Evaluation}\label{sub:eval}
+[directly comparable to MIREX]
+
+\subsection{Results}\label{sub:results}
+[hopefully good!]
+
+%---------------------------------------
+\section{Conclusions}\label{sec:conclus}
+%---------------------------------------
+
+We have presented a new approach to representing the tonal content in music, 
+the octarine.  By being based on the full log-frequency scaled spectrum, the 
+octarine can capture relationships between notes that extend outside of one 
+octave, and thus form a richer description of chords and harmonic content than 
+the traditional chroma.  These advantages have been illustrated with respect to 
+a simple chord recognition evaluation, but we anticipate their usefulness in a wide 
+range of music audio analysis tasks.
+
+\bibliography{references}
+
+\end{document}
