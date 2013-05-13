@@ -32,16 +32,13 @@ def load_cdl(path):
 def process_song(song, coder):
 
     songname = os.path.basename(song)
-    songname = songname[:songname.index('-CL.npy')]
+    songname = songname[:songname.index('-CL-magnitude.npy')]
 
     print songname
     X = np.load(song)
 
-    # Chop off the top octave
-    X = X[:,:-48]
-
     # Pad out dimension
-    X = X.reshape((X.shape[0], X.shape[1], 1), order='A')
+    X = X.reshape((X.shape[0], 1, X.shape[1]), order='A')
 
     # Encode the frames
     A = coder.transform(X)

@@ -4,10 +4,12 @@ def reduce_chords(chords,alphabet):
   reduced_chords = chords
   if alphabet == 'minmaj':
     reduced_chords = reduce_to_minmaj(chords)
-  if alphabet == 'triads':
+  elif alphabet == 'triads':
     reduced_chords = reduce_to_triads(chords)
-  if alphabet == 'quads':
+  elif alphabet == 'quads':
     reduced_chords = reduce_to_quads(chords)
+  elif alphabet == 'bass':
+    reduced_chords = reduce_to_bass(chords)  
 
   return reduced_chords
   
@@ -24,13 +26,13 @@ def reduce_to_minmaj(chords):
       # major
       c_type='maj'
     elif quality == 1: 
-      # major
-      c_type='maj'    
+      # minor
+      c_type='min'    
     elif quality == 2:
-      # major
-      c_type='maj'    
+      # diminished
+      c_type='min'    
     elif quality == 3:
-      # major
+      # augmented
       c_type = 'maj'
     elif quality == 4:  
       # suspended
@@ -42,7 +44,10 @@ def reduce_to_minmaj(chords):
     # get rootnote and append type
     [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
     
-    reduced_chords.append(rootnote + ':' + c_type)
+    if rootnote == 'N':
+      reduced_chords.append('N') 
+    else:    
+      reduced_chords.append(rootnote + ':' + c_type)
 
   return reduced_chords
   
@@ -53,17 +58,24 @@ def reduce_to_triads(chords):
   for chord in (chords):
     
     quality, success = chord2quality(chord)
-  
     if quality == 0:
+      # major
       c_type='maj'
     elif quality == 1: 
+      # minor
       c_type='min'    
     elif quality == 2:
+      # diminished
       c_type='dim'    
     elif quality == 3:
+      # augmented
       c_type = 'aug'
     elif quality == 4:  
-      c_type = 'sus'
+      # suspended
+      if '4' in chord:
+        c_type = 'sus4'        
+      else:
+        c_type = 'sus2'
     else:   
       # unknown
       print 'Error in reduce_to_triads: Unknown chord quality' 
@@ -71,7 +83,10 @@ def reduce_to_triads(chords):
     # get rootnote and append type
     [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
     
-    reduced_chords.append(rootnote + ':' + c_type)
+    if rootnote == 'N':
+       reduced_chords.append('N')   
+    else:   
+      reduced_chords.append(rootnote + ':' + c_type)
 
   return reduced_chords  
   
@@ -107,16 +122,24 @@ def reduce_to_quads(chords):
     quality,success = chord2quality(chord)
     
     if quality == 0:
+      # major
       c_type='maj'
-    if quality == 1:
+    elif quality == 1: 
+      # minor
       c_type='min'    
-    if quality == 2:
-      c_type='dim'   
-    if quality == 3:
-      c_type='aug'
-    if quality == 4:
-      c_type='sus'         
-             
+    elif quality == 2:
+      # diminished
+      c_type='dim'    
+    elif quality == 3:
+      # augmented
+      c_type = 'aug'
+    elif quality == 4:  
+      # suspended
+      if '4' in chord:
+        c_type = 'sus4'        
+      else:
+        c_type = 'sus2'
+        
     # Get the degreelist for the triad
     degs, success = shorthand2degrees(c_type)
     triad_type = rootnote + ':(' + degs
@@ -130,6 +153,39 @@ def reduce_to_quads(chords):
         reduced_chords.append(triad_type + ')')
         
   return reduced_chords
+
+def reduce_to_bass(chords):
+    
+  BassNotes= []
+  for C in chords:
+    # get chord info
+    rootnote, shorthand, degreelist,bass,success = parsechord(C)
+         
+    # no chord
+    if (rootnote == 'N'):
+      BassNotes.append(13)
+      
+    # Patch 1: no chord
+    elif (rootnote == '&pause'):
+      BassNotes.append(13)
+             
+    # no inversion, bass = rootnote
+    elif len(bass) == 0:
+      BassNotes.append(note2pitchclass(rootnote)[0] + 1)
+             
+    # there's a bassnote
+    else:
+      BassNotes.append(note2pitchclass(bass)[0] + 1)
+         
+    # check if it was an interval
+    if BassNotes[-1] == 0:
+      # get the note wrt the root
+      bnote = degree2note(bass,rootnote)[0]
+                   
+      # convert the note to a pitch class
+      BassNotes[-1] = note2pitchclass(bnote)[0] + 1   
+      
+  return BassNotes      
     
 # Low level functions for extracting notes etc
 def chord2quality(chordsymbol):
@@ -197,7 +253,7 @@ def parsechord(chord):
     index = index + 1
     # check to see there are no further characters
     if (index <= ilength):
-        print 'Error in parsechord: Extra characters after "no chord" symbol' 
+        print 'Error in parsechord: Extra characters after "no chord" symbol'
         success = 0
   else:
   # parse the chord symbol
@@ -1056,28 +1112,29 @@ def degree2note(degree, root):
     if rootnatural == 'B':
       fifthindex = 6;
       
-    # locate enharmonic root on line of fifths (modulo 6 arithmetic)     
-    fifthoffset = rootaccs*7
-    fifthindex = fifthindex + fifthoffset;
+    # locate enharmonic root on line of fifths (modulo 6 arithmetic)   
+    fifthoffset = rootaccs*7 
+    fifthindex = fifthindex + fifthoffset
 
     # calculate interval translation on line of fifths (DONT add 1 to account
     # for matlab referencing of array elements... 
-    
-    intervaloffset = intervaltranslation[np.mod(int(interval),7)]
+    modint = np.mod(int(interval),7)
+    intervaloffset = intervaltranslation[modint] 
     finalposition = fifthindex + intervaloffset
         
-    naturalvalue = np.mod(finalposition,7);
+    naturalvalue = np.mod(finalposition,7)
     
     # calculate number of accidentals
     if finalposition < 0: 
       # if final position is negative then calculate number of flats
       # remembering to include the extra first flat (-1)
-      accidentals = np.fix((finalposition+1)/7) + degreeaccs -1    
+      accidentals = int(np.fix((finalposition)/7)) + degreeaccs
     else:
       # note is a natural or has a number of sharps
       accidentals = int(np.fix(finalposition/7) + degreeaccs)
     
     note = fifthpositions[naturalvalue]    
+    
     if accidentals > 0:       
         for i in range(accidentals):
             note = note + '#'
@@ -1092,6 +1149,205 @@ def degree2note(degree, root):
     
   return note,success    
             
+def note2degree(note, root):
+
+  import numpy as np
+  success = True
+  degree = ''
+
+  # interval translations on the line of fifths
+  fifthtranslations = [1,5,2,6,3,7,4];
 
 
+  # get note and root natural position and accidentals on line of fifths 
+  noteposition, success1 = note2fifthposition(note)
   
+  rootposition, success2 = note2fifthposition(root)
+
+  if success1 and success2:
+
+    # take the difference between the two note positions for relative positions
+    # of notes with respect to one and other
+    fifthsdifference = noteposition - rootposition + 1
+
+    # natural difference on line of fifths
+    fifthsinterval = np.mod((fifthsdifference-1),7);
+
+    i = 0;
+
+    # find number of accidentals apart on line of fifths
+    if fifthsdifference < 0: # if above 0 then either natural or sharp
+
+      #if final position is negative then calculate number of flats
+      # remembering to include the extra first flat (-1)
+      accidentals = np.fix((fifthsdifference)/7) -1
+    
+    else:
+      # note is a natural or has a number of sharps
+      accidentals = np.fix(fifthsdifference/7);
+
+
+    # put the required number of sharps or flats into the output string
+    if accidentals > 0:
+
+      for i in range(accidentals):
+        degree = degree + '#'
+        
+    elif accidentals <= 0:
+        abs_acc = int(np.abs(accidentals))
+        for i in range(abs_acc):            
+           degree = degree + 'b'
+    
+    # find interval value from translation array
+    interval = fifthtranslations[int(fifthsinterval)]
+   
+    degree = degree + str(interval)
+
+  else:
+    success = False
+    
+  return degree,success
+  
+def note2fifthposition(note):
+
+  success = True
+  noteposition = ''
+
+  notenatural, noteaccidentals, success1 = note2fifthinfo(note)
+
+  if success:
+    noteposition = notenatural + 7.*noteaccidentals - 1
+  
+  return noteposition, success  
+  
+def note2fifthinfo(note):
+
+  success = True
+  position = ''
+  accidentals = ''
+
+  natural, accidentals, success = parsenote(note)
+
+  if success:
+    if natural == 'F':
+            position = 0
+    elif natural == 'C':
+            position = 1
+    elif natural == 'G':
+            position = 2
+    elif natural == 'D':
+            position = 3            
+    elif natural == 'A':
+            position = 4            
+    elif natural == 'E':
+            position = 5            
+    elif natural == 'B':
+            position = 6           
+    else:
+      print 'Error in note2fifthinfo: unrecognised natural'
+      success = False
+
+  return position,accidentals, success
+
+def chord2pitchclasses(chordsymbol):
+
+  success = True
+  pitchclasses = []
+  bassclass = ''
+
+  # get constituent notes
+  chordnotes, bassnote, success = chord2notes(chordsymbol)
+
+  if success and len(chordnotes) > 0:
+    # find pitchclasses of notes
+    pitchclasses, success = notes2pitchclasses(chordnotes)
+
+  if success and len(bassnote) > 0:
+    bassclass, success = note2pitchclass(str(bassnote))
+
+  if not success:
+    print 'Error in chord2pitchclasses: Couldn''t convert chord"' + chordsymbol + '"'
+    
+  return pitchclasses, bassclass, success  
+  
+def notes2pitchclasses(notes):
+
+  ilength = len(notes)
+  index = 1
+  success = True
+
+  pitchclasses = []
+
+  while index <= ilength:
+    
+    # added .strip() here so it can parse note like 'G# ' with whitespace. 
+    out, success = note2pitchclass(str(notes[index-1]).strip());
+    pitchclasses.append(out)
+    if success:
+      index = index + 1
+    else:
+      print 'Error in notes2pitchclasses: couldn''t convert notes "' + notes + '"'
+      index = ilength + 1            
+      
+  return pitchclasses, success
+
+def note2pitchclass(note):
+
+  ilength = len(note)
+  index = 1
+  success = True
+
+
+  # first char should be a natural name A-G
+  if note[index-1] == 'C':
+    pitchclass = 0 
+    index = index + 1
+  elif note[index-1] == 'D':
+    pitchclass = 2 
+    index = index + 1
+  elif note[index-1] == 'E':
+    pitchclass = 4 
+    index = index + 1
+  elif note[index-1] == 'F':
+    pitchclass = 5 
+    index = index + 1
+  elif note[index-1] == 'G':
+    pitchclass = 7 
+    index = index + 1
+  elif note[index-1] == 'A':
+    pitchclass = 9
+    index = index + 1
+  elif note[index-1] == 'B':
+    pitchclass = 11 
+    index = index + 1
+  else:
+      
+    # This 'fails' when passed a numeric (return 0), which is actually fine  
+    #print 'Error in Note2PitchClass: Unrecognised note "' + note + '"'
+    index = ilength + 1
+    pitchclass = -1
+    success = False
+         
+  # any other characters should be either flats or sharps
+  while index <= ilength:
+           
+    if note[index-1] == 'b':
+      pitchclass = pitchclass - 1 # decrement pitchclass value
+      index = index + 1
+    elif note[index-1] == '#':            
+      pitchclass = pitchclass + 1 # increment pitchclass value
+      index = index + 1
+    else: 
+      print 'Error in Note2PitchClass: Unrecognised note "' + note + '"'
+      index = ilength + 1
+      pitchclass = -1
+      success = False
+      
+  # Use modulo command to make sure that we are back within range 0-12
+  if success:    
+    import numpy as np
+    pitchclass = np.mod(pitchclass,12) 
+    
+  return pitchclass, success
+
+                  
