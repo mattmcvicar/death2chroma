@@ -33,12 +33,14 @@ def learn_fda(inpath, label_type):
 
     print 'Loading data...'
     for f in files:
+        Anew = np.load(f)
+        Ynew = load_labels(f, label_type)
         if A is None:
-            A = vectorize(np.load(f))
-            Y = load_labels(f, label_type)
+            A = vectorize(Anew)
+            Y = Ynew
         else:
-            A = np.vstack((A, vectorize(np.load(f))))
-            Y = np.vstack(load_labels(f, label_type))
+            A = np.vstack((A, Anew))
+            Y = np.vstack((Y, Ynew))
 
     print 'Building FDA model...'
     transformer = FDA.FDA()
