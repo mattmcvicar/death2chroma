@@ -2,13 +2,13 @@
 
 # Parameters
 luma_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/uspop2002-npy/'
-GT_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/USpoplabs_flat/'
+GT_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/USpoplabs_flat/'
 
 luma_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_luma_minmaj_labs/'
-GT_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
+GT_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/chordlabs/'
 
 # Alphabet
-alphabet = 'minmaj'
+alphabet = 'quads'
 
 # get filenames
 import os

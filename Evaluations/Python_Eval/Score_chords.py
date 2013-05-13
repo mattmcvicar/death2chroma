@@ -10,7 +10,6 @@ Predict_dir = '/home/bmcfee/git/death2chroma/Predictions/Beatles_minmaj_linear_c
 
 # Is something appended to the predictions? (ie '_prediction')?
 appended = '-raw-compressed-prediction-linear.lab'
->>>>>>> 4272dbb423423e90eba3458c7a1eed33e8babe76
 
 # Get filenames
 import os
