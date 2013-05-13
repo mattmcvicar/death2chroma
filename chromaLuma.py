@@ -58,6 +58,7 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
         takeLog - whether or not to take a log, default True
     Output:
         spectrum - log-frequency spectrum
+        semiDiffs - Difference in semitones between peaks and their nearest note
     '''
     
     minNote = kwargs.get( 'minNote', 36 )
@@ -84,7 +85,18 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     nBins = np.floor( np.log((fs/2.0)/minFreq)/np.log(frequencyRatio) )
     
     # Freqs corresponding to each bin in FFT
-    fftFreqs = np.arange( N/2.0 + 1.0 )*(fs/N)
+    fftFreqs = np.arange( X.shape[0] )*(fs/N)
+    
+    # Compute local maxima of DFT
+    localMax = np.logical_and(X > np.hstack([X[0], X[:-1]]), X >= np.hstack([X[1:], X[-1]]))
+    # Get frequencies corresponding to the local max
+    localMaxFreqs = fftFreqs[np.flatnonzero( localMax )]
+    # Convert to MIDI note number (Hz)
+    localMaxNotes = librosa.feature.hz_to_midi( localMaxFreqs )
+    # Throw out values outside of musical range
+    localMaxNotes = localMaxNotes[np.logical_and( localMaxNotes >= 24, localMaxNotes < 96 )]
+    # Compute semitone differences
+    semiDiffs = localMaxNotes - np.round( localMaxNotes )
     
     # Freqs corresponding to each bin in log F output
     logFFTFreqs = minFreq*np.exp( np.log( 2 )*np.arange( nBins )/binsPerOctave)
@@ -144,5 +156,10 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     # Normalize
     logFrequencyX = (logFrequencyX - logFrequencyX.min())/(logFrequencyX.max() - logFrequencyX.min())
     
-    return logFrequencyX
+    return semiDiffs, logFrequencyX
+
+# <codecell>
+
+a, fs = librosa.load( 'rita.wav' )
+logFrequencySpectrum( a, fs )
 
