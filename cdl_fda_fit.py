@@ -40,7 +40,7 @@ def learn_fda(inpath, label_type):
             Y = Ynew
         else:
             A = np.vstack((A, Anew))
-            Y = np.vstack((Y, Ynew))
+            Y = np.hstack((Y, Ynew))
 
     print 'Building FDA model...'
     transformer = FDA.FDA()
