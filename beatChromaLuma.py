@@ -15,6 +15,54 @@ import chromaLuma
 
 # <codecell>
 
+def onset_strength_median(y=None, sr=22050, S=None, **kwargs):
+    """Extract onsets from an audio time series or spectrogram, using median
+        
+        Arguments:
+        y         -- (ndarray) audio time-series          | default: None
+        sr        -- (int)     sampling rate of y         | default: 22050
+        S         -- (ndarray) pre-computed spectrogram   | default: None
+        
+        **kwargs    -- Parameters to mel spectrogram, if S is not provided
+        
+        See librosa.feature.melspectrogram() for details
+        
+        Note: if S is provided, then (y, sr) are optional.
+        
+        Returns onsets:
+        onsets    -- (ndarray) vector of onset strength
+        
+        Raises:
+        ValueError -- if neither (y, sr) nor S are provided
+        
+        """
+    
+    # First, compute mel spectrogram
+    if S is None:
+        if y is None:
+            raise ValueError('One of "S" or "y" must be provided.')
+        
+        S   = librosa.feature.melspectrogram(y, sr = sr, **kwargs)
+        
+        # Convert to dBs
+        S   = librosa.logamplitude(S)
+    
+    
+    ### Compute first difference
+    onsets  = np.diff(S, n=1, axis=1)
+    
+    ### Discard negatives (decreasing amplitude)
+    #   falling edges could also be useful segmentation cues
+    #   to catch falling edges, replace max(0,D) with abs(D)
+    onsets  = np.maximum(0.0, onsets)
+    
+    ### Average over mel bands
+    onsets  =  np.median(onsets, axis=0)
+    
+    return onsets
+
+# <codecell>
+
 def beatChromaLuma( filename, **kwargs ):
     '''
     Given a file, get the beat-synchronous chroma-luma matrices
@@ -37,14 +85,14 @@ def beatChromaLuma( filename, **kwargs ):
     nOctaves = kwargs.get( 'nOctaves', 4 )
 
     # Read in audio data
-    audioData, fs = librosa.load( filename, sr=None )
-    hop = np.floor( 0.003*fs )
-    # Get beat locations
-    _, beats = librosa.beat.beat_track( audioData, fs, hop_length=hop )
+    audioData, fs = librosa.load( filename, sr=22050 )
+    hop = 64
+    frameSize = 2048
+    # Get beat locations - using modified median filter version for the onset envelope
+    _, beats = librosa.beat.beat_track( sr=fs, onsets=onset_strength_median( audioData, fs, hop_length=hop, n_fft=frameSize, n_mels=128 ), hop_length=hop, n_fft=frameSize )
     # Convert beat locations to samples
     beatSamples = beats*hop
     # Get harmonic component of signal
-    frameSize = 2**np.ceil( np.log2( .09*fs ) )
     spectrogram = librosa.stft( audioData, n_fft=frameSize, hop_length=frameSize/4 )
     harmonicSpectrogram, _ = librosa.hpss.hpss_median( np.abs( spectrogram ), win_P=13, win_H=13, p=4 )
     harmonicSpectrogram = harmonicSpectrogram*np.exp( 1j*np.angle( spectrogram ) )
@@ -63,20 +111,16 @@ if __name__ == '__main__':
     # Create .npy files for each beatles mp3
     import os
     import glob
-    dirs = [os.path.join( 'data/beatles', subdir) for subdir in os.listdir( 'data/beatles' )]
-    for subdir in dirs:
-        mp3Files = glob.glob( os.path.join( subdir, '*.mp3' ) )
-        for mp3File in mp3Files:
-            beats, semitrums = beatChromaLuma( mp3File )
-            nameBase = os.path.splitext( mp3File )[0]
-            np.save( nameBase + '-beats.npy', beats )
-            np.save( nameBase + '-CL-magnitude.npy', semitrums )
-    dirs = [os.path.join( 'data/uspop2002', subdir) for subdir in os.listdir( 'data/uspop2002' )]
-    for subdir in dirs:
-        mp3Files = glob.glob( os.path.join( subdir, '*.mp3' ) )
-        for mp3File in mp3Files:
-            beats, semitrums = beatChromaLuma( mp3File )
-            nameBase = os.path.splitext( mp3File )[0]
-            np.save( nameBase + '-beats.npy', beats )
-            np.save( nameBase + '-CL-magnitude.npy', semitrums )
+    mp3Files = glob.glob( 'data/beatles/*.mp3' )
+    for mp3File in mp3Files:
+        beats, semitrums = beatChromaLuma( mp3File )
+        nameBase = os.path.splitext( mp3File )[0]
+        np.save( nameBase + '-beats.npy', beats )
+        np.save( nameBase + '-CL-magnitude.npy', semitrums )
+    mp3Files = glob.glob( os.path.join( 'data/uspop2002/*.mp3' ) )
+    for mp3File in mp3Files:
+        beats, semitrums = beatChromaLuma( mp3File )
+        nameBase = os.path.splitext( mp3File )[0]
+        np.save( nameBase + '-beats.npy', beats )
+        np.save( nameBase + '-CL-magnitude.npy', semitrums )
 
