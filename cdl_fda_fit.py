@@ -33,10 +33,10 @@ def learn_fda(inpath, label_type):
 
     print 'Loading data...'
     for f in files:
-        Anew = np.load(f)
+        Anew = vectorize(np.load(f))
         Ynew = load_labels(f, label_type)
         if A is None:
-            A = vectorize(Anew)
+            A = Anew
             Y = Ynew
         else:
             A = np.vstack((A, Anew))
