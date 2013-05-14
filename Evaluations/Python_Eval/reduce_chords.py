@@ -906,10 +906,15 @@ def chord2notes(chordsymbol):
 
   if len(z) > 1:
     # bass exists. See what type
-    if z[1].isdigit():
+    [rootnote,shorthand,degreelist,bass, success] = getchordinfo(chordsymbol)
+    
+    if success:
       # getchordinfo can handle this already
       new_chordsymbol = '/'.join(z)
-    else: 
+      
+    else:
+        
+      # Couldnt convert. Must be a note name  
       # convert the note name to an int relative to rootnote, without calling 
       # getchordinfo
       index = 1
@@ -924,6 +929,7 @@ def chord2notes(chordsymbol):
         index = index + 1
         
       # Got rootnote
+      print z
       degree = note2degree(z[1],rootnote)
       new_chordsymbol = z[0] + '/' + degree[0]
   else:
