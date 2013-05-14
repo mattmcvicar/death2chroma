@@ -121,14 +121,14 @@ if __name__ == '__main__':
     tunings = {}
     for mp3File in mp3Files:
         tuning, beats, semitrums = beatChromaLuma( mp3File )
-        tunings[mp3file] = tuning
+        tunings[mp3File] = tuning
         nameBase = os.path.splitext( mp3File )[0]
         np.save( nameBase + '-beats.npy', beats )
         np.save( nameBase + '-CL-magnitude.npy', semitrums )
     mp3Files = glob.glob( os.path.join( 'data/uspop2002/*.mp3' ) )
     for mp3File in mp3Files:
         tuning, beats, semitrums = beatChromaLuma( mp3File )
-        tunings[mp3file] = tuning
+        tunings[mp3File] = tuning
         nameBase = os.path.splitext( mp3File )[0]
         np.save( nameBase + '-beats.npy', beats )
         np.save( nameBase + '-CL-magnitude.npy', semitrums )
