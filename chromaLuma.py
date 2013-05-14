@@ -56,9 +56,9 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
         smoothingPower - power to raise spectral envelope to, default 3.0, ignored if smoothingWindow=None
         aWeight - whether or not to a-weight the spectrum, default False
         takeLog - whether or not to take a log, default True
+        tuningOffset - apply this tuning offset (in semitones), default 0
     Output:
         spectrum - log-frequency spectrum
-        semiDiffs - Difference in semitones between peaks and their nearest note
     '''
     
     minNote = kwargs.get( 'minNote', 35.5 )
@@ -68,8 +68,9 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     smoothingPower = kwargs.get( 'smoothingPower', 3.0 )
     aWeight = kwargs.get( 'aWeight', False )
     takeLog = kwargs.get( 'takeLog', False )
+    tuningOffset = kwargs.get( 'tuningOffset', 0 )
     
-    minFreq = librosa.feature.midi_to_hz( minNote )
+    minFreq = librosa.feature.midi_to_hz( minNote + tuningOffset )
     
     # Number of samples
     N = float(audioData.shape[0])
@@ -86,18 +87,6 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     
     # Freqs corresponding to each bin in FFT
     fftFreqs = np.arange( X.shape[0] )*(fs/N)
-    
-    # Compute local maxima of DFT
-    Xc = X*(X > 2*scipy.signal.medfilt( X, 31 ) )
-    localMax = np.logical_and(Xc > np.hstack([Xc[0], Xc[:-1]]), Xc >= np.hstack([Xc[1:], Xc[-1]]))
-    # Get frequencies corresponding to the local max
-    localMaxFreqs = fftFreqs[np.flatnonzero( localMax )]
-    # Convert to MIDI note number (Hz)
-    localMaxNotes = librosa.feature.hz_to_midi( localMaxFreqs )
-    # Throw out values outside of musical range
-    localMaxNotes = localMaxNotes[np.logical_and( localMaxNotes >= 24, localMaxNotes < 108 )]
-    # Compute semitone differences
-    semiDiffs = localMaxNotes - np.round( localMaxNotes )
     
     # Freqs corresponding to each bin in log F output
     logFFTFreqs = minFreq*np.exp( np.log( 2 )*np.arange( nBins )/binsPerOctave)
@@ -157,5 +146,5 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     # Normalize
     logFrequencyX = (logFrequencyX - logFrequencyX.min())/(logFrequencyX.max() - logFrequencyX.min())
     
-    return semiDiffs, logFrequencyX
+    return logFrequencyX
 

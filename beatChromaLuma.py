@@ -12,6 +12,7 @@ Compute beat-synchronous chroma-luma matrices
 import librosa
 import numpy as np
 import chromaLuma
+import scipy.signal
 
 # <codecell>
 
@@ -63,6 +64,46 @@ def onset_strength_median(y=None, sr=22050, S=None, **kwargs):
 
 # <codecell>
 
+def getTuningOffset( spectrogram, fs ):
+    '''
+    Given a spectrogram of a song, compute its tuning offset in semitones
+    
+    Input: 
+        spectrogram - Magnitude STFT of a song, size nBins x nFrames
+        fs - sampling rate of the song
+    Output:
+        tuningOffset - tuning offset in semitones of this song
+    '''
+    # Pre-allocate with the largest it could be
+    semiDiffs = np.zeros( spectrogram.shape[0]*spectrogram.shape[1] )
+    n = 0
+    # Freqs corresponding to each bin in FFT
+    for X in spectrogram.T:
+        # Compute local maxima of DFT
+        Xc = X*(X > .1*np.max( X ))#*(X > 2*scipy.signal.medfilt( X, 31 ) )
+        localMax = np.flatnonzero( np.logical_and(Xc > np.hstack([Xc[0], Xc[:-1]]), Xc > np.hstack([Xc[1:], Xc[-1]])) )
+        # Parabolic interpolation
+        alpha = X[localMax - 1]
+        beta = X[localMax]
+        gamma = X[localMax + 1]
+        localMax = localMax + .5*(alpha - gamma)/(alpha - 2*beta + gamma)
+        # Get frequencies corresponding to the local max
+        localMaxFreqs = localMax*fs/(2.0*(spectrogram.shape[0] - 1))
+        # Convert to MIDI note number (Hz)
+        localMaxNotes = librosa.feature.hz_to_midi( localMaxFreqs )
+        # Throw out values outside of musical range
+        localMaxNotes = localMaxNotes[np.logical_and( localMaxNotes >= 24, localMaxNotes < 108 )]
+        # Compute semitone differences
+        trackSemiDiffs = localMaxNotes - np.round( localMaxNotes )
+        semiDiffs[n:n + trackSemiDiffs.shape[0]] = trackSemiDiffs
+        n += trackSemiDiffs.shape[0]
+    semiDiffs = semiDiffs[:n]
+    counts, bins = np.histogram( semiDiffs, 100 )
+    bestBin = np.argmax( counts )
+    return (bins[bestBin] + bins[bestBin + 1])/2.0
+
+# <codecell>
+
 def beatChromaLuma( filename, **kwargs ):
     '''
     Given a file, get the beat-synchronous chroma-luma matrices
@@ -96,20 +137,45 @@ def beatChromaLuma( filename, **kwargs ):
     # Get harmonic component of signal
     spectrogram = librosa.stft( audioData, n_fft=frameSize, hop_length=frameSize/4 )
     harmonicSpectrogram, _ = librosa.hpss.hpss_median( np.abs( spectrogram ), win_P=13, win_H=13, p=4 )
+    # Compute tuning offset
+    tuningOffset = getTuningOffset( harmonicSpectrogram, fs )
     harmonicSpectrogram = harmonicSpectrogram*np.exp( 1j*np.angle( spectrogram ) )
     harmonicData = librosa.istft( harmonicSpectrogram, n_fft=frameSize, hop_length=frameSize/4 )
     # Compute a chroma-luma matrix for each beat
     semitrums = np.zeros( (beats.shape[0], nOctaves*binsPerOctave) )
     # Keep track of semitone differences
-    semiDiffs = np.array( [] )
     for n, (beatStart, beatEnd) in enumerate( zip( beatSamples[:-1], beatSamples[1:] ) ):
         # Grab audio samples within this beat
         beatData = harmonicData[beatStart:beatEnd]
-        trackSemiDiffs, semitrums[n] = chromaLuma.logFrequencySpectrum( beatData, fs, **kwargs )
-        semiDiffs = np.append( semiDiffs, trackSemiDiffs )
-    counts, bins = np.histogram( semiDiffs, 100 )
-    bestBin = np.argmax( counts )
-    return (bins[bestBin] + bins[bestBin + 1])/2.0, librosa.frames_to_time( beats, fs, hop ), semitrums
+        semitrums[n] = chromaLuma.logFrequencySpectrum( beatData, fs, **kwargs )
+    return librosa.frames_to_time( beats, fs, hop ), semitrums
+
+# <codecell>
+
+def fakeSemigram( labelsFile, binsPerOctave, nOctaves ):
+    '''
+    Given annotations, generates a synthetic semigram.
+    
+    Input:
+        labelsFile - chord label file of the song in question
+        binsPerOctave - number of semigram bins in each octave
+        nOctaves - number of octaves to compute
+    Output:
+        fakeSemigram - a synthetic semigram matrix, size nBins x nBeats
+    '''
+    import pickle
+    with open( "Training_Scripts/dict_minmaj.p" ) as f:
+        labelToIntervals = pickle.load( f )[1]
+    labels = np.load( labelsFile )
+    baseOctave = np.zeros( (binsPerOctave, labels.shape[0]), dtype=np.bool )
+    binsPerSemi = binsPerOctave/4
+    for n, label in enumerate( labels ):
+        for semi in labelToIntervals[label]:
+            semis = np.arange( semi*4, (semi+1)*4 )
+            baseOctave[semis, n] = 1
+    octaves = np.tile( baseOctave, (nOctaves, 1) )
+    octaves = np.roll( octaves, -binsPerOctave/24, axis=0 )
+    return octaves
 
 # <codecell>
 
@@ -118,17 +184,14 @@ if __name__ == '__main__':
     import os
     import glob
     mp3Files = glob.glob( 'data/beatles/*.mp3' )
-    tunings = {}
     for mp3File in mp3Files:
-        tuning, beats, semitrums = beatChromaLuma( mp3File )
-        tunings[mp3File] = tuning
+        beats, semitrums = beatChromaLuma( mp3File )
         nameBase = os.path.splitext( mp3File )[0]
         np.save( nameBase + '-beats.npy', beats )
         np.save( nameBase + '-CL-magnitude.npy', semitrums )
     mp3Files = glob.glob( os.path.join( 'data/uspop2002/*.mp3' ) )
     for mp3File in mp3Files:
-        tuning, beats, semitrums = beatChromaLuma( mp3File )
-        tunings[mp3File] = tuning
+        beats, semitrums = beatChromaLuma( mp3File )
         nameBase = os.path.splitext( mp3File )[0]
         np.save( nameBase + '-beats.npy', beats )
         np.save( nameBase + '-CL-magnitude.npy', semitrums )
