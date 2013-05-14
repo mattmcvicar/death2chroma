@@ -49,7 +49,7 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     Input:
         audioData - vector of audio samples
         fs - sampling rate
-        minNote - minimum note number to consider, default 36
+        minNote - minimum note number to consider, default 35.5
         binsPerOctave - number of magnitude values to compute per octave, default 48
         nOctaves - number of octaves, default 4
         smoothingWindow - window to use to smooth the spectrum, None = don't smooth, default np.hanning( binsPerOctave )
@@ -61,7 +61,7 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
         semiDiffs - Difference in semitones between peaks and their nearest note
     '''
     
-    minNote = kwargs.get( 'minNote', 36 )
+    minNote = kwargs.get( 'minNote', 35.5 )
     binsPerOctave = kwargs.get( 'binsPerOctave', 48 )
     nOctaves = kwargs.get( 'nOctaves', 4 )
     smoothingWindow = kwargs.get( 'smoothingWindow', np.hanning( binsPerOctave ) )
@@ -88,13 +88,14 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     fftFreqs = np.arange( X.shape[0] )*(fs/N)
     
     # Compute local maxima of DFT
-    localMax = np.logical_and(X > np.hstack([X[0], X[:-1]]), X >= np.hstack([X[1:], X[-1]]))
+    Xc = X*(X > 2*scipy.signal.medfilt( X, 31 ) )
+    localMax = np.logical_and(Xc > np.hstack([Xc[0], Xc[:-1]]), Xc >= np.hstack([Xc[1:], Xc[-1]]))
     # Get frequencies corresponding to the local max
     localMaxFreqs = fftFreqs[np.flatnonzero( localMax )]
     # Convert to MIDI note number (Hz)
     localMaxNotes = librosa.feature.hz_to_midi( localMaxFreqs )
     # Throw out values outside of musical range
-    localMaxNotes = localMaxNotes[np.logical_and( localMaxNotes >= 24, localMaxNotes < 96 )]
+    localMaxNotes = localMaxNotes[np.logical_and( localMaxNotes >= 24, localMaxNotes < 108 )]
     # Compute semitone differences
     semiDiffs = localMaxNotes - np.round( localMaxNotes )
     

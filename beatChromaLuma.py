@@ -69,7 +69,7 @@ def beatChromaLuma( filename, **kwargs ):
     
     Input:
         filename - full path to file to process
-        minNote - minimum note number to consider, default 36
+        minNote - minimum note number to consider, default 35.5
         binsPerOctave - number of magnitude values to compute per octave, default 48
         nOctaves - number of octaves, default 4
         smoothingWindow - window to use to smooth the spectrum, None = don't smooth, default np.hanning( binsPerOctave )
@@ -77,6 +77,7 @@ def beatChromaLuma( filename, **kwargs ):
         aWeight - whether or not to a-weight the spectrum, default False
         takeLog - whether or not to take a log, default True
     Output:
+        tuning - Estimated tuning offset in semitones
         beatTimes - vector of beat locations, in seconds, size nBeats
         semitrums - matrix of per-beat semitrums, size nBeats x binsPerOctave*nOctaves
     '''
@@ -99,11 +100,14 @@ def beatChromaLuma( filename, **kwargs ):
     harmonicData = librosa.istft( harmonicSpectrogram, n_fft=frameSize, hop_length=frameSize/4 )
     # Compute a chroma-luma matrix for each beat
     semitrums = np.zeros( (beats.shape[0], nOctaves*binsPerOctave) )
+    # Keep track of semitone differences
+    semiDiffs = np.array( [] )
     for n, (beatStart, beatEnd) in enumerate( zip( beatSamples[:-1], beatSamples[1:] ) ):
         # Grab audio samples within this beat
         beatData = harmonicData[beatStart:beatEnd]
-        semitrums[n] = chromaLuma.logFrequencySpectrum( beatData, fs, **kwargs )
-    return librosa.frames_to_time( beats, fs, hop ), semitrums
+        trackSemiDiffs, semitrums[n] = chromaLuma.logFrequencySpectrum( beatData, fs, **kwargs )
+        semiDiffs = np.append( semiDiffs, trackSemiDiffs )
+    return (bins[bestBin] + bins[bestBin + 1])/2.0, librosa.frames_to_time( beats, fs, hop ), semitrums
 
 # <codecell>
 
@@ -112,14 +116,17 @@ if __name__ == '__main__':
     import os
     import glob
     mp3Files = glob.glob( 'data/beatles/*.mp3' )
+    tunings = {}
     for mp3File in mp3Files:
-        beats, semitrums = beatChromaLuma( mp3File )
+        tuning, beats, semitrums = beatChromaLuma( mp3File )
+        tunings[mp3file] = tuning
         nameBase = os.path.splitext( mp3File )[0]
         np.save( nameBase + '-beats.npy', beats )
         np.save( nameBase + '-CL-magnitude.npy', semitrums )
     mp3Files = glob.glob( os.path.join( 'data/uspop2002/*.mp3' ) )
     for mp3File in mp3Files:
-        beats, semitrums = beatChromaLuma( mp3File )
+        tuning, beats, semitrums = beatChromaLuma( mp3File )
+        tunings[mp3file] = tuning
         nameBase = os.path.splitext( mp3File )[0]
         np.save( nameBase + '-beats.npy', beats )
         np.save( nameBase + '-CL-magnitude.npy', semitrums )
