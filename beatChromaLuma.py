@@ -179,6 +179,36 @@ def fakeSemigram( labelsFile, binsPerOctave, nOctaves ):
 
 # <codecell>
 
+def synthesizeSemigram( beats, semitrums, wavFile, minNote=35.5, binsPerOctave=48 ):
+    '''
+    Synthesize a semigram using sinusoids
+    
+    Input:
+        beats - beat locations in seconds
+        semitrums - semigram, size nBeats x nBins
+        wavFile - where to write the synthesized semigram
+        minNote - MIDI note of the lowest bin of the semigram, default 35.5
+        binsPerOctave - number of bins in each octave in the semigram, default 48
+    '''
+    fs = 44100
+    binsPerSemi = binsPerOctave/12
+    firstBin = binsPerSemi/2
+    notes = minNote + np.arange( firstBin, semitrums.shape[1], binsPerSemi )/binsPerSemi
+    frequencies = librosa.feature.midi_to_hz( notes )
+    beats -= beats[0]
+    beats = np.append( beats, beats[-1] + .5 )
+    N = np.int( fs*beats[-1] )
+    output = np.zeros( N )
+    for n, freq in enumerate( frequencies ):
+        sine = scipy.signal.square( freq*2.0*np.pi*np.arange( N )/fs, .25 )
+        for m, (start, end) in enumerate( zip( beats[:-1], beats[1:] ) ):
+            sine[start*fs:end*fs] *= semitrums[m, n*binsPerSemi + firstBin]**2
+        output += sine
+    output /= np.max( np.abs( output ) )
+    librosa.output.write_wav( wavFile, output, fs )
+
+# <codecell>
+
 if __name__ == '__main__':
     import os
     import glob
