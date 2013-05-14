@@ -10,6 +10,8 @@ def reduce_chords(chords,alphabet):
     reduced_chords = reduce_to_quads(chords)
   elif alphabet == 'bass':    
     reduced_chords = reduce_to_bass(chords)  
+  elif alphabet == 'minmaj_bass':
+    reduced_chords = reduce_to_minmaj_bass(chords)
   else:
     print 'Unknown chord alphabet: ' + alphabet  
   return reduced_chords
@@ -188,51 +190,51 @@ def reduce_to_bass(chords):
       
   return BassNotes      
     
-#def reduce_to_minmaj_bass(chords):
-#    
-#  reduced_chords = []
-#  intervals = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B']
-#  for chord in (chords):
-#    
-#    quality, success = chord2quality(chord)
-#  
-#    if quality == 0:
-#      # major
-#      c_type='maj'
-#    elif quality == 1: 
-#      # minor
-#      c_type='min'    
-#    elif quality == 2:
-#      # diminished
-#      c_type='min'    
-#    elif quality == 3:
-#      # augmented
-#      c_type = 'maj'
-#    elif quality == 4:  
-#      # suspended
-#      c_type = 'maj'
-#    else:   
-#      # unknown
-#      print 'Error in reduce_to_minmaj: Unknown chord quality' 
-#      
-#    # get rootnote
-#    [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
-#    
-#    if rootnote == 'N':
-#      reduced_chords.append('N') 
-#    else: 
-#      # Ensure rootnote is in intervals
-#      root_pitchclass, success = note2pitchclass(rootnote)
-#      new_root = intervals[root_pitchclass]
-#        
-#      # Get bass
-#      basspitch = reduce_to_bass([chord])
-#      
-#      # Convert to interval
-#      bassnote = intervals[basspitch[0]-1]
-#      reduced_chords.append(new_root + ':' + c_type + '/' + bassnote)
-#
-#  return reduced_chords    
+def reduce_to_minmaj_bass(chords):
+    
+  reduced_chords = []
+  intervals = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B']
+  for chord in (chords):
+    
+    quality, success = chord2quality(chord)
+  
+    if quality == 0:
+      # major
+      c_type='maj'
+    elif quality == 1: 
+      # minor
+      c_type='min'    
+    elif quality == 2:
+      # diminished
+      c_type='min'    
+    elif quality == 3:
+      # augmented
+      c_type = 'maj'
+    elif quality == 4:  
+      # suspended
+      c_type = 'maj'
+    else:   
+      # unknown
+      print 'Error in reduce_to_minmaj: Unknown chord quality' 
+      
+    # get rootnote
+    [rootnote, shorthand,degreelist,bassdegree, success] = getchordinfo(chord)
+    
+    if rootnote == 'N':
+      reduced_chords.append('N') 
+    else: 
+      # Ensure rootnote is in intervals
+      root_pitchclass, success = note2pitchclass(rootnote)
+      new_root = intervals[root_pitchclass]
+        
+      # Get bass
+      basspitch = reduce_to_bass([chord])
+      
+      # Convert to interval
+      bassnote = intervals[basspitch[0]-1]
+      reduced_chords.append(new_root + ':' + c_type + '/' + bassnote)
+
+  return reduced_chords    
     
 # Low level functions for extracting notes etc
 def chord2quality(chordsymbol):
@@ -898,8 +900,37 @@ def chord2notes(chordsymbol):
   chordnotes = []
   bassnote = ''
 
-  # parse the chordsymbol
-  [rootnote,shorthand,degreelist,bass, success] = getchordinfo(chordsymbol)
+  # First split by '/' to find bass
+  import re
+  z = re.split('/',chordsymbol)
+
+  if len(z) > 1:
+    # bass exists. See what type
+    if z[1].isdigit():
+      # getchordinfo can handle this already
+      new_chordsymbol = '/'.join(z)
+    else: 
+      # convert the note name to an int relative to rootnote, without calling 
+      # getchordinfo
+      index = 1
+      ilength = len(chordsymbol)
+      rootnote = ''
+      while (index <= ilength):
+    
+        if any([chordsymbol[index-1]==':', chordsymbol[index-1]=='/', chordsymbol[index-1]=='(', chordsymbol[index-1] ==  ')']):
+          break
+
+        rootnote = rootnote + chordsymbol[index-1]
+        index = index + 1
+        
+      # Got rootnote
+      degree = note2degree(z[1],rootnote)
+      new_chordsymbol = z[0] + '/' + degree[0]
+  else:
+    new_chordsymbol = chordsymbol
+  
+  # parse the (new) chordsymbol
+  [rootnote,shorthand,degreelist,bass, success] = getchordinfo(new_chordsymbol)
 
   # if 'no chord' then return N
   if success:

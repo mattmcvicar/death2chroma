@@ -8,7 +8,7 @@ luma_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_
 GT_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/chordlabs/'
 
 # Alphabet
-alphabet = 'quads'
+alphabet = 'minmaj_bass'
 
 # get filenames
 import os
@@ -55,6 +55,7 @@ chord_indices = list(set(all_chords))
 # Some of these will contain the same pitch classes. So make a map
 chord_classes = dict()
 print 'getting information on chords...'
+
 for chord in chord_indices:
     
   # get notes
@@ -67,7 +68,7 @@ for chord in chord_indices:
   else:    
     chordnotes.sort()  
     chord_classes[tuple(chordnotes)] = [chord]
-    
+
 # Now we have a state model. For each GT file, map to the index in chord_classes 
 # and then sample according to sample times
 import numpy as np
