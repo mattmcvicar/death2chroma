@@ -180,19 +180,19 @@ def fakeSemigram( labelsFile, binsPerOctave, nOctaves ):
 # <codecell>
 
 if __name__ == '__main__':
-    # Create .npy files for each beatles mp3
     import os
     import glob
+    from joblib import Parallel, delayed
+
+    def processSong( mp3File ):
+        beats, semitrums = beatChromaLuma( mp3File )
+        nameBase = os.path.splitext( mp3File )[0] 
+        np.save( nameBase + '-beats.npy', beats )
+        np.save( nameBase + '-CL-magnitude.npy', semitrums )
+    
+    n_jobs = 6
     mp3Files = glob.glob( 'data/beatles/*.mp3' )
-    for mp3File in mp3Files:
-        beats, semitrums = beatChromaLuma( mp3File )
-        nameBase = os.path.splitext( mp3File )[0]
-        np.save( nameBase + '-beats.npy', beats )
-        np.save( nameBase + '-CL-magnitude.npy', semitrums )
+    Parallel(n_jobs=n_jobs)(delayed(processSong)(mp3File) for mp3File in mp3Files)
     mp3Files = glob.glob( os.path.join( 'data/uspop2002/*.mp3' ) )
-    for mp3File in mp3Files:
-        beats, semitrums = beatChromaLuma( mp3File )
-        nameBase = os.path.splitext( mp3File )[0]
-        np.save( nameBase + '-beats.npy', beats )
-        np.save( nameBase + '-CL-magnitude.npy', semitrums )
+    Parallel(n_jobs=n_jobs)(delayed(processSong)(mp3File) for mp3File in mp3Files)
 
