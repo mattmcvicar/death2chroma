@@ -12,7 +12,7 @@
 \usepackage{floatrow}
 \usepackage{array}
 \usepackage{booktabs}
-
+\usepackage{url}
 \usepackage{color}
 
 % Title.
@@ -76,16 +76,24 @@ HMM chord recognizer on a standard chord database.\footnote{Authors appear in al
 %-------------------------------------
 \section{Introduction}\label{sec:introduction}
 %-------------------------------------
-Contemporary popular music relies heavily on the conventions of Western harmony.  
 
-\subsection{Background}\label{sub:background}
-[talk about chords. Applications to cover song ID, key estimation, hit song science etc. Availability of data is now such that new features needed to avoid overfitting. Go beyond the octave for jazz etc. Full spectrum probably too large to deal with. ]
+Contemporary popular music relies heavily on the conventions of Western harmony, consisting of melody, chords, and key signatures. Although they are inter-dependent, these three components have each seen considerable research in recent years in their own right (see for example \cite{durrieu2010source,6155600,noland2009influences}). Chords in particular are collections of simultaneous notes which are often said to concisely describe the harmony of a piece, and their extraction and analysis has been fed into research areas as diverse as beat estimation \cite{papadopoulos2008simultaneous}, structural segmentation \cite{mauch2009using} and cover song detection \cite{ellis2007identifyingcover}. It is for these reasons that Automatic Chord Estimation (ACE) has been an extremely active area of research in recent years.
 
-\subsection{Motivation and Contributions}\label{sub:motivation}
-[Contribution is new feature, plug into a standard HMM and see imrovements.]
+Performance of ACE algorithms is benchmarked at the annual Music Information Retrieval Evaluation eXchange (MIREX\footnote{\url{http://www.music-ir.org/mirex/wiki/MIREX_HOME}}), with algorithms in the most recent iteration achieving over 83\% chord overlap ratio on a set of 217 songs by The Beatles, Queen and Zweieck on an alphabet of 24 major and minor chords and an additional `no chord' symbol. However, the difference between this accuracy and the peak performance of 73.47\% on a hidden set of annotations from the Billboard SALAMI project \cite{burgoyne2011expert} has lead several authors to suggest that several authors are overfitting the former dataset \cite{de2012improving,6155600}. 
+
+The dominant feature used in Automatic Chord Estimation (ACE) research is a 12 dimensional representation which describes the evolution of the strength of the each of the pitch classes C-B, known as the chromagram (see Fig ???). Whilst chromagram features have been shown to be well-suited to identifying simple chords in a test set comprised of only a few artists, there are several obvious drawbacks to this low-dimensional audio feature. For example, chromagrams can by their design only capture chords within one octave, and not complex extensions commonly found in jazz such as \texttt{G:13}. Furthermore, the recognition of chord inversions such as \texttt{C:maj/E} is not possible directly from the chromagram, since in the octave summed representation pitch hight is discarded (although some authors have explored extracting distinct bass and treble-range features in order to re-construct chord inversions \cite{6155600,mauch2010simultaneous}). 
+
+To combat these shortcomings, in this work we introduce the new `Octarine' feature for chord estimation, capable of identifying notes beyond the octave and chord inversions, without the need for explicit bass modelling. By simply folding a log frequency spectrogram along the octave axis, we construct a 12 (pitch classes) by 5 (octave) audio feature for each frame in which the difference between \texttt{A:min7} and \texttt{A:min/b7} (for example) is clearly apparent. 
+
+The structure of the paper is as follows: in the remainder of this section we will review the relevant work in the field of automatic chord estimation, with a focus on the features researchers have used to represent tonal pitch. Sec.~\ref{sec:features} of this paper describes the calculation of the Octarine from a digitial audio sample. We pass this feature to ??? model, briefly described in Sec.~\ref{sec:model}, and evaluate on a test featuring ??? artists in Sec.~\ref{sec:exp}, before concluding in Sec.~\ref{sec:conclus}.
+
+\subsection{Related Work}
+Feature extraction for ACE dates to the early work by Fujishima \cite{fujishima1999realtime}, whose Pitch Class Profile attempted to capture pitch salience by taking a Discrete Fourier Transform of the input audio and mapping the resulting frequency powers to the musical scale. Since this work there have been steady improvements to audio representations for chord estimation, including tuning estimation \cite{sheh2003chord}, beat synchronisation \cite{bello2005robust}, and various methods for calculating pitch salience \cite{pauws2004musical,6155600}.
+
+In addition to the chromagram, some authors \cite{harte2006detecting} have investigated wrapping the chromagram to a 6 dimensional `tonal centroid' vector, under the assumption that important musical intervals such as the perfect fifth have large Euclidean distance in a chromagram and are therefore perceptually unsound. Furthermore, the Non-Negative Least Squares chroma features defined in \cite{mauch2010approximate} attempted to minimise the (squared) distance between the chroma frames and a set of known candidate chord templates in an attempt to reduce the background noise (drums etc) in the spectrum. 
 
 %-------------------------------------
-\section{Feature Extraction}\label{sec:features}
+\section{Octarine Feature Extraction}\label{sec:features}
 %-------------------------------------
 [Feature pipeline and mathematics]
 
@@ -102,7 +110,10 @@ Contemporary popular music relies heavily on the conventions of Western harmony.
 \section{Experiments}\label{sec:exp}
 %-------------------------------------
 \subsection{Datasets}\label{sub:data}
-[Beatles, USpop]
+Expert made ground truth annotations are essential for testing the accuracy of an ACE algorithm. For machine learning systems, they also serve as training data. As mentioned in Sec.~\ref{sec:introduction}, the availability of 
+\subsubsection{The Beatles}
+
+\subsubsection{USpop}
 
 \subsection{Evaluation}\label{sub:eval}
 [directly comparable to MIREX]
