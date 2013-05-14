@@ -158,8 +158,3 @@ def logFrequencySpectrum( audioData, fs, **kwargs ):
     
     return semiDiffs, logFrequencyX
 
-# <codecell>
-
-a, fs = librosa.load( 'rita.wav' )
-logFrequencySpectrum( a, fs )
-
