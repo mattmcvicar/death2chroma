@@ -77,7 +77,7 @@ def beatChromaLuma( filename, **kwargs ):
         aWeight - whether or not to a-weight the spectrum, default False
         takeLog - whether or not to take a log, default True
     Output:
-        tuning - Estimated tuning offset in semitones
+        tuning - estimated tuning offset of the song, in semitones
         beatTimes - vector of beat locations, in seconds, size nBeats
         semitrums - matrix of per-beat semitrums, size nBeats x binsPerOctave*nOctaves
     '''
@@ -107,6 +107,8 @@ def beatChromaLuma( filename, **kwargs ):
         beatData = harmonicData[beatStart:beatEnd]
         trackSemiDiffs, semitrums[n] = chromaLuma.logFrequencySpectrum( beatData, fs, **kwargs )
         semiDiffs = np.append( semiDiffs, trackSemiDiffs )
+    counts, bins = np.histogram( semiDiffs, 100 )
+    bestBin = np.argmax( counts )
     return (bins[bestBin] + bins[bestBin + 1])/2.0, librosa.frames_to_time( beats, fs, hop ), semitrums
 
 # <codecell>
