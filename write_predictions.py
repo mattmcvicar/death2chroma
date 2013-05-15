@@ -4,7 +4,7 @@
 import os
 os.chdir('/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Training_Scripts')
 
-pred_name = 'USpop_raw_full_linear_minmaj'
+pred_name = 'Beatles_CL_magnitude_fda_minmaj_bass_hmm_prediction_minmaj'
 pred_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Brian_predicts/' + pred_name + '/'
 output_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/' + pred_name + '/'
 
@@ -12,8 +12,15 @@ output_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predic
 files = os.listdir(pred_dir)
 
 # Load up the chord indices
+import cPickle
+chord_dict = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Training_Scripts/dict_minmaj.p'
+pkl_file = open(chord_dict, 'rb')
+data = cPickle.load(pkl_file)
+
+chord_classes = data[0]
+chord_indices = data[1]
+
 import numpy as np
-np.load('/Users/mattmcvicar/Desktop/Work/New_chroma_features/chord_indices_minmaj.npy')
 
 import sys
 sys.path.append("../")

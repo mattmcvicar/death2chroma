@@ -1,15 +1,9 @@
 # Directories for prediction and GT
-<<<<<<< HEAD
-GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/USpoplabs_flat/'
-Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/USpop_raw_full_linear_minmaj/'
-=======
-# GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/chordlabs/'
-# Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Beatles_minmaj_linear_compressed_cdl/'
-GT_dir = '/home/bmcfee/git/death2chroma/chordlabs/'
-Predict_dir = '/home/bmcfee/git/death2chroma/Predictions/Beatles_minmaj_linear_compressed/'
+GT_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/beatles/'
+Predict_dir = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Predictions/Beatles_CL_magnitude_fda_minmaj_bass_hmm_prediction_minmaj/'
 
 # Is something appended to the predictions? (ie '_prediction')?
-appended = '-raw-compressed-prediction-linear.lab'
+appended = '-CL-magnitude-fda_minmaj_bass-hmm-prediction-minmaj.lab'
 
 # Get filenames
 import os
@@ -27,15 +21,28 @@ appended = Predict_files[0][len(GT_files[0][:-len(file_ext)]):-len(file_ext)] + 
 # Alphabet
 alphabet = 'minmaj';
 
+# Dictionary (not explicity used to score, just for visualisation)
+import cPickle
+chord_dict = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Package/Training_Scripts/dict_minmaj.p'
+pkl_file = open(chord_dict, 'rb')
+data = cPickle.load(pkl_file)
+
+chord_classes = data[0]
+chord_indices = data[1]
+
 # Store results
 CP_Overlap = []
 NP_Overlap = []
 MIREX_Overlap = []
 song_lengths = []
 
+# Store sampled sequences
+Display_P = []
+Display_GT = []
+ 
 # Ignore these files
-ignore = [150] # Revolution 9 for Beatles
-#ignore = [] # USpop use all
+#ignore = [150] # Revolution 9 for Beatles
+ignore = [] # USpop use all
 
 # Main loop
 import numpy as np
@@ -96,13 +103,15 @@ for (index,GT_file) in enumerate(GT_files):
 
   # Now sample each chord at 1 kHz. Store pitch classes and sorted pitch classes
   # for NP and CP
-  unique_chords = list(set(np.hstack((GT_chords_reduce,P_chords_reduce))))
+  #unique_chords = list(set(np.hstack((GT_chords_reduce,P_chords_reduce))))
   GT_chord_sample_CP = []; GT_chord_sample_NP = []; GT_chord_sample_MIREX = []
   P_chord_sample_CP = []; P_chord_sample_NP = []; P_chord_sample_MIREX = []
   
+  # Also for display purposes
+  GT_chord_sample_disp = []; P_chord_sample_disp = []
   for c_index,chord in enumerate(GT_chords_reduce):
     duration = int(round(1000*(GT_end_times[c_index] - GT_start_times[c_index])))
-    
+       
     # Need bass symbol for CP, first two notes for MIREX
     sym = reduce_chords.chord2pitchclasses(chord)[0]
     bass_sym = GT_bass[c_index]
@@ -116,9 +125,15 @@ for (index,GT_file) in enumerate(GT_files):
     GT_chord_sample_CP.extend([[sym, bass_sym]]*duration)
     GT_chord_sample_MIREX.extend([MIREX_sym]*duration)
     
+    # Look up chord index for visualisation
+    for k in chord_classes:
+      if chord in chord_classes[k]:   
+        GT_chord_sample_disp.extend([chord_indices.index(k)]*duration)
+        break
+   
   for c_index,chord in enumerate(P_chords_reduce):
     duration = int(round(1000*(P_end_times[c_index] - P_start_times[c_index])))
-    
+      
     # Need bass symbol for CP, first two notes for MIREX
     sym = reduce_chords.chord2pitchclasses(chord)[0]
     bass_sym = P_bass[c_index]
@@ -131,7 +146,14 @@ for (index,GT_file) in enumerate(GT_files):
     P_chord_sample_NP.extend([sym]*duration)
     P_chord_sample_CP.extend([[sym, bass_sym]]*duration)
     P_chord_sample_MIREX.extend([MIREX_sym]*duration)
+
+    # Look up chord index for visualisation
+    for k in chord_classes:
+      if chord in chord_classes[k]:   
+        P_chord_sample_disp.extend([chord_indices.index(k)]*duration)
+        break
     
+  sd;lkfdc  
   # Still can have rounding effects, but only a maximum of 
   # nchords/1000 seconds...
   minlen = np.min([len(P_chord_sample_CP),len(GT_chord_sample_CP)])
@@ -144,13 +166,18 @@ for (index,GT_file) in enumerate(GT_files):
   GT_chord_sample_MIREX = GT_chord_sample_MIREX[:minlen]
   P_chord_sample_MIREX = P_chord_sample_MIREX[:minlen]
   
-  # Display?
-  import matplotlib.pyplot as plt
-  print len(GT_chord_sample_NP)
-  plt.imshow(np.vstack((np.array(GT_chord_sample_NP),np.array(P_chord_sample_NP))),interpolation="nearest",aspect="auto")
-  plt.show() 
+  GT_chord_sample_disp = GT_chord_sample_disp[:minlen]
+  P_chord_sample_disp = P_chord_sample_disp[:minlen]
   
-  # CP = chords have the same notes
+  # Store
+  Display_P.append(GT_chord_sample_disp)  
+  Display_GT.append(P_chord_sample_disp)  
+  
+  # Display?
+  #import matplotlib.pyplot as plt
+  #print len(GT_chord_sample_NP)
+  #plt.imshow(np.vstack((np.array(GT_chord_sample_NP),np.array(P_chord_sample_NP))),interpolation="nearest",aspect="auto")
+  #plt.show() 
   
   # Finally, output score
   CP_correct = [GT_chord_sample_CP[i] == p for (i,p) in enumerate(P_chord_sample_CP)]
@@ -161,7 +188,6 @@ for (index,GT_file) in enumerate(GT_files):
   NP_Overlap.append(100*np.mean(NP_correct))
   MIREX_Overlap.append(100*np.mean(MIREX_correct))
   song_lengths.append(minlen)
-  break
   
 # Remove some songs
 CP_Overlap = [o for index,o in enumerate(CP_Overlap) if index not in ignore]
