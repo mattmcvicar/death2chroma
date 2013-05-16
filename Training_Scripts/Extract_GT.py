@@ -1,14 +1,14 @@
 # Trains a model, given directory of chromaluma and GT
 
 # Parameters
-luma_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/uspop2002-npy/'
+luma_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/USpopmp3/uspop2002/'
 GT_dir_uspop = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/USpoplabs_flat/'
 
-luma_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/Beatles_luma_minmaj_labs/'
+luma_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/beatles/'
 GT_dir_beatles = '/Users/mattmcvicar/Desktop/Work/New_chroma_features/chordlabs/'
 
 # Alphabet
-alphabet = 'minmaj_bass'
+alphabet = 'minmaj'
 
 # get filenames
 import os
@@ -118,6 +118,7 @@ beatles_savedir = './beatles_indices/'
 uspop_savedir = './uspop_indices/'
 
 import re
+
 for index,file in enumerate(filenames):
     
   save_name = re.split('/',file)[-1]
